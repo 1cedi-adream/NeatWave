@@ -6,8 +6,8 @@ function csvCell(value: string | number) {
 
 export function downloadOrdersCsv(orders: Order[]) {
   const rows = [
-    ["Order", "Customer", "Items", "Due by", "Status", "Total"],
-    ...orders.map((order) => [order.id, order.name, order.items, order.due, order.status, order.amount]),
+    ["Order", "Customer", "Phone", "Items", "Due by", "Status", "Total"],
+    ...orders.map((order) => [order.id, order.name, order.phone, order.items, order.due, order.status, order.amount]),
   ];
   const csv = rows.map((row) => row.map(csvCell).join(",")).join("\r\n");
   const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));

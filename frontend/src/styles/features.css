@@ -93,6 +93,7 @@
   .panel { @apply rounded-lg border border-line bg-white; }
   .overview-grid { @apply grid grid-cols-[minmax(0,1.72fr)_minmax(265px,.82fr)] items-start gap-4; }
   .orders-panel { @apply min-w-0 overflow-hidden; }
+  .orders-panel table { @apply min-w-[680px]; }
   .panel-heading { @apply flex items-start justify-between p-4; }
   .panel-heading h2, .directory-toolbar h2 { @apply m-0 font-display text-sm font-bold tracking-tight text-gray-800; }
   .panel-heading p, .directory-toolbar p { @apply mt-1 text-[10px] text-gray-500; }
@@ -106,14 +107,15 @@
   .search-field, .filter-select { @apply flex h-10 items-center gap-2 rounded-lg border border-gray-300 px-2.5 text-gray-600; }
   .search-field input { @apply w-28 border-0 bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-500; }
   .filter-select select { @apply max-w-36 appearance-none border-0 bg-transparent text-sm text-gray-700 outline-none; }
+  .filter-select>span>select { @apply max-w-none; }
   .table-scroll { @apply overflow-x-auto; }
   table { @apply w-full min-w-[760px] border-collapse text-left; }
   thead { @apply bg-gray-50; }
-  th { @apply h-10 whitespace-nowrap px-3 text-[11px] font-bold tracking-wider text-gray-500; }
-  td { @apply h-14 whitespace-nowrap border-t border-gray-100 px-3 py-2 text-[13px] text-gray-700; }
+  th { @apply h-10 whitespace-nowrap px-3 text-xs font-bold tracking-wider text-gray-600; }
+  td { @apply h-14 whitespace-nowrap border-t border-gray-100 px-3 py-2 text-sm text-gray-700; }
   th:first-child, td:first-child { @apply pl-4; }
   th:last-child, td:last-child { @apply pr-4; }
-  .order-id { @apply border-0 bg-transparent p-0 text-[13px] font-bold text-emerald-800 underline-offset-2 hover:underline; }
+  .order-id { @apply border-0 bg-transparent p-0 text-sm font-bold text-emerald-800 underline-offset-2 hover:underline; }
   .customer-cell { @apply flex items-center gap-2 font-semibold text-gray-700; }
   .customer-cell .avatar { @apply h-[25px] w-[25px] text-[8px]; }
   .service-cell { @apply grid gap-0.5 font-semibold text-gray-600; }
@@ -138,6 +140,14 @@
   .empty-state span { @apply text-xs text-gray-600; }
   .right-column { @apply grid gap-3.5; }
   .flow-panel { @apply px-4; }
+  .status-chart-panel { @apply min-w-0 overflow-hidden; }
+  .status-chart-panel .panel-heading { @apply items-center px-5 pb-0; }
+  .status-chart-content { @apply grid gap-3 px-4 pb-4; }
+  .status-chart-canvas { @apply relative h-64 min-w-0; }
+  .status-chart-summary { @apply m-0 grid list-none grid-cols-2 gap-x-6 gap-y-2 border-t border-gray-100 pt-3; }
+  .status-chart-summary li { @apply flex min-w-0 items-center gap-2 text-sm text-gray-700; }
+  .status-chart-key { @apply h-2.5 w-2.5 shrink-0 rounded-sm; }
+  .status-chart-summary li b { @apply ml-auto font-semibold tabular-nums text-gray-900; }
   .panel-heading.compact { @apply items-center px-0 pb-2; }
   .flow-total { @apply flex items-baseline gap-2 border-b border-gray-100 pb-3; }
   .flow-total>b { @apply font-display text-[25px] font-bold tracking-tight; }
@@ -154,6 +164,9 @@
   .bar-green { @apply bg-emerald-500; }
   .flow-link { @apply h-9 w-full justify-between border-t border-gray-100 p-0; }
   .pickup-card { @apply rounded-lg border border-emerald-100 bg-emerald-50 p-4; }
+  .order-records-card { @apply grid gap-3 p-4; }
+  .order-records-card .lower-title, .order-records-card .repeat-number { @apply min-w-0; }
+  .order-records-card .text-link { @apply justify-self-start; }
   .pickup-head { @apply flex h-6 items-center gap-2; }
   .pickup-icon { @apply grid h-6 w-6 place-items-center rounded-md bg-emerald-100 text-emerald-800; }
   .pickup-head>span { @apply flex-1 text-[8px] font-bold tracking-widest text-emerald-900/70; }
@@ -257,8 +270,8 @@
   .unread-dot { @apply h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-700; }
   .settings-layout { @apply grid grid-cols-[190px_minmax(0,1fr)] items-start gap-4; }
   .settings-nav { @apply grid gap-1 py-1; }
-  .settings-nav a { @apply flex min-h-10 items-center gap-2 rounded-md px-2.5 text-sm text-gray-700 no-underline hover:bg-gray-50; }
-  .settings-nav a.selected { @apply bg-brand-soft font-bold text-emerald-900; }
+  .settings-nav button { @apply flex min-h-10 items-center gap-2 rounded-md border-0 bg-transparent px-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800; }
+  .settings-nav button.selected { @apply bg-brand-soft font-bold text-emerald-900; }
   .settings-sections { @apply grid gap-4; }
   .settings-panel { @apply overflow-hidden; }
   .settings-panel-heading { @apply flex items-center gap-2.5 border-b border-gray-100 px-4 py-4; }
@@ -331,7 +344,7 @@
   .service-sample { @apply max-w-[110px] text-right leading-relaxed; }
   .settings-layout { @apply grid-cols-1; }
   .settings-nav { @apply flex overflow-x-auto pb-2; }
-  .settings-nav a { @apply whitespace-nowrap; }
+  .settings-nav button { @apply whitespace-nowrap; }
   .notification-row { @apply gap-2 px-2.5; }
   .notification-row .row-action { @apply shrink-0 text-sm; }
   .service-filters { @apply overflow-x-auto; }
@@ -342,7 +355,8 @@
   .table-toolbar { @apply flex-col items-stretch; }
   .table-tools { @apply w-full; }
   .search-field { @apply flex-1; }
-  .filter-select { @apply ml-0; }
+  .filter-select { @apply ml-0 min-w-40 shrink-0; }
+  .filter-select>span { @apply min-w-0 flex-1; }
   .right-column { @apply grid-cols-1; }
   .lower-strip { @apply h-auto min-h-16 flex-wrap py-2.5; }
   .lower-title { @apply min-w-[55%]; }

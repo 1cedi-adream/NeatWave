@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import {
-  ArrowRight,
   ChevronLeft,
   ChevronRight,
   ListFilter,
@@ -8,9 +7,10 @@ import {
   WashingMachine,
 } from "lucide-react";
 import type { Order } from "../types/order";
-import { orderStatuses } from "../../../constants/orderStatuses";
 import type { OrderStatus } from "../../../constants/orderStatuses";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
+
+const orderTableStatuses = ["Received", "Washing", "Ready for Pickup", "Out for Delivery"] as const;
 
 const statusClass: Record<string, string> = {
   Washing: "blue",
@@ -24,20 +24,16 @@ const statusClass: Record<string, string> = {
 };
 type OrdersTableProps = {
   orders: Order[];
-  section: string;
   tab: string;
   onTabChange: (tab: string) => void;
-  onViewAll: () => void;
   onNotice: (message: string) => void;
   onStatusChange: (orderId: string, status: OrderStatus) => void;
 };
 
 export function OrdersTable({
   orders,
-  section,
   tab,
   onTabChange,
-  onViewAll,
   onNotice,
   onStatusChange,
 }: OrdersTableProps) {
@@ -69,17 +65,12 @@ export function OrdersTable({
       <div className="panel-heading">
         <div>
           <h2>
-            {section === "Overview" ? "Orders to keep an eye on" : "All orders"}
+            "All orders"
           </h2>
           <p>
-            {section === "Overview"
-              ? "A quick look at the shop floor."
-              : "Search and update orders across your shop."}
+            "Search, filter, and update orders across your shop."
           </p>
         </div>
-        <button className="text-link" onClick={onViewAll}>
-          View all orders <ArrowRight size={15} />
-        </button>
       </div>
       <div className="table-toolbar">
         <div className="segmented">
@@ -98,7 +89,7 @@ export function OrdersTable({
               aria-pressed={tab === (name === "Ready" ? "Ready for Pickup" : name)}
             >
               {name}
-              {name === "All orders" && <span>28</span>}
+              {name === "All orders" && <span>{orders.length}</span>}
             </button>
           ))}
         </div>
@@ -107,6 +98,7 @@ export function OrdersTable({
             <Search size={15} />
             <input
               id="order-search"
+              aria-label="Search orders"
               placeholder="Search orders"
               value={search}
               onChange={(event) => { setSearch(event.target.value); setPage(1); }}
@@ -121,7 +113,7 @@ export function OrdersTable({
               aria-label="Filter by status"
             >
               <option>All orders</option>
-              {orderStatuses.map((status) => (
+              {orderTableStatuses.map((status) => (
                 <option key={status}>{status}</option>
               ))}
             </CustomSelect>
@@ -130,11 +122,11 @@ export function OrdersTable({
       </div>
       <div className="table-scroll">
         <table>
+          <caption className="sr-only">Laundry orders with customer, due date, status and amount due</caption>
           <thead>
             <tr>
               <th>ORDER</th>
               <th>CUSTOMER</th>
-              <th>ITEMS</th>
               <th>DUE BY</th>
               <th>STATUS</th>
               <th className="amount-col">TOTAL</th>
@@ -148,7 +140,7 @@ export function OrdersTable({
                     className="order-id"
                     onClick={() =>
                       onNotice(
-                        `${order.id} · ${order.name} · ${order.items} · ${order.amount}`,
+                        `${order.id} · ${order.name} · ${order.amount}`,
                       )
                     }
                   >
@@ -162,9 +154,6 @@ export function OrdersTable({
                     </div>
                     <span>{order.name}</span>
                   </div>
-                </td>
-                <td>
-                  <span className="service-cell">{order.items}</span>
                 </td>
                 <td>
                   <span
@@ -181,7 +170,7 @@ export function OrdersTable({
                     value={order.status}
                     onChange={(event) => onStatusChange(order.id, event.target.value as OrderStatus)}
                   >
-                    {orderStatuses.map((status) => <option key={status} value={status}>{status}</option>)}
+                    {orderTableStatuses.map((status) => <option key={status} value={status}>{status}</option>)}
                   </CustomSelect>
                 </td>
                 <td className="amount-col">{order.amount}</td>

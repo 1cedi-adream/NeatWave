@@ -8,6 +8,7 @@ type OrderStore = {
   orders: Order[];
   createOrder: (
     name: string,
+    phone: string,
     items: string,
     amountDue: number,
     payment: string,
@@ -17,7 +18,7 @@ type OrderStore = {
 
 export const useOrderStore = create<OrderStore>((set, get) => ({
   orders: sampleOrders,
-  createOrder: (name, items, amountDue, payment) => {
+  createOrder: (name, phone, items, amountDue, payment) => {
     const id = `WD-${2482 + Math.max(0, get().orders.length - sampleOrders.length)}`;
     const amount = formatCurrency(amountDue);
     const initials = name
@@ -31,6 +32,7 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
         {
           id,
           name,
+          phone,
           initials,
           items,
           due: "Today, 5:00 PM",
@@ -41,7 +43,7 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
         ...state.orders,
       ],
     }));
-    return { id, name, items, amount, payment };
+    return { id, name, phone, items, amount, payment };
   },
   updateOrderStatus: (orderId, status) => set((state) => ({
     orders: state.orders.map((order) => order.id === orderId ? { ...order, status } : order),

@@ -10,3 +10,4 @@ export const orderStatuses = [
 ] as const;
 
 export type OrderStatus = (typeof orderStatuses)[number];
+

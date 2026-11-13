@@ -1,4 +1,3 @@
-import { useState } from "react";
 import type { FormEvent } from "react";
 import { Check, Download, Plus, WashingMachine, X } from "lucide-react";
 import type { Receipt } from "../types/order";
@@ -10,8 +9,6 @@ type CreateOrderDialogProps = {
 };
 
 export function CreateOrderDialog({ onClose, onSave }: CreateOrderDialogProps) {
-  const [itemRows, setItemRows] = useState([0]);
-
   return (
     <div
       className="modal-backdrop"
@@ -55,28 +52,6 @@ export function CreateOrderDialog({ onClose, onSave }: CreateOrderDialogProps) {
               />
             </label>
           </div>
-          <fieldset className="grid gap-3 border-0 p-0">
-            <legend className="text-sm font-semibold text-gray-800">Laundry items</legend>
-            {itemRows.map((row) => (
-              <div className="form-row" key={row}>
-                <label>
-                  Item
-                  <input name="itemName" required placeholder="e.g. Shirts" />
-                </label>
-                <label>
-                  Quantity
-                  <input name="itemQuantity" type="number" min="1" defaultValue="1" required />
-                </label>
-              </div>
-            ))}
-            <button
-              type="button"
-              className="row-action w-fit"
-              onClick={() => setItemRows((rows) => [...rows, rows.length])}
-            >
-              <Plus size={14} /> Add another item
-            </button>
-          </fieldset>
           <label>
             Amount to pay (GHS)
             <input className="w-full" name="amountDue" type="number" min="0.01" step="0.01" placeholder="0.00" required />
