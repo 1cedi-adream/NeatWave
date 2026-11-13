@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build output
+dist/
+**/dist/
+build/
+**/build/
+
+# Local environment files and secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Logs and tool output
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+.vite/
+coverage/
+
+# Local editor and operating system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Local certificates and keys
+*.pem
+*.key

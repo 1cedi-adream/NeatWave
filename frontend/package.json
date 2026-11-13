@@ -1,0 +1,30 @@
+{
+  "name": "laundry-management-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.0.0",
+    "@vitejs/plugin-react": "latest",
+    "axios": "^1.7.0",
+    "lucide-react": "^0.468.0",
+    "react": "latest",
+    "react-dom": "latest",
+    "react-router-dom": "^7.0.0",
+    "sonner": "^2.0.8",
+    "vite": "latest",
+    "zustand": "^5.0.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.0",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "tailwindcss": "^4.1.0",
+    "typescript": "latest"
+  }
+}
