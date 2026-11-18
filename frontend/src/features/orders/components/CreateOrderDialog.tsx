@@ -1,167 +1,528 @@
-import type { FormEvent } from "react";
-import { Check, Download, Plus, WashingMachine, X } from "lucide-react";
-import type { Receipt } from "../types/order";
-import { CustomSelect } from "../../../components/ui/CustomSelect";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { Plus, Trash2, X } from "lucide-react";
+import { toast } from "sonner";
+import { CustomSelect } from "@/components/ui/CustomSelect";
+import {
+  useCreateCustomer,
+  useCustomers,
+} from "@/features/customers/hooks/useCustomers";
+import { useServices } from "@/features/services/hooks/useServices";
+import { useSettings } from "@/features/settings/hooks/useSettings";
+import { formatCurrency } from "@/lib/formatCurrency";
+import { getApiErrorMessage } from "@/lib/apiError";
+import { useCreateOrder } from "../hooks/useOrders";
+import { estimateLineTotal } from "../utils";
+import { CustomerCombobox } from "./CustomerCombobox";
+import type { Customer } from "@/features/customers/types/customer";
 
-type CreateOrderDialogProps = {
-  onClose: () => void;
-  onSave: (event: FormEvent<HTMLFormElement>) => void;
+type DraftLine = {
+  key: number;
+  serviceId: string;
+  quantity: number;
+  basketOptionId?: string;
 };
 
-export function CreateOrderDialog({ onClose, onSave }: CreateOrderDialogProps) {
+export function CreateOrderDialog({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void;
+  onCreated: (orderId: string) => void;
+}) {
+  const [step, setStep] = useState(1);
+  const [customerId, setCustomerId] = useState("");
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
+    null,
+  );
+  const [newCustomer, setNewCustomer] = useState(false);
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [debouncedCustomerSearch, setDebouncedCustomerSearch] = useState("");
+  const [customerDraft, setCustomerDraft] = useState({
+    fullName: "",
+    phone: "",
+    email: "",
+    smsConsent: true,
+    emailConsent: true,
+  });
+  const [lines, setLines] = useState<DraftLine[]>([
+    { key: Date.now(), serviceId: "", quantity: 1 },
+  ]);
+  const [discountGhs, setDiscountGhs] = useState(0);
+  const [taxBasisPoints, setTaxBasisPoints] = useState<number | undefined>();
+  useEffect(() => {
+    const timeoutId = window.setTimeout(
+      () => setDebouncedCustomerSearch(customerSearch.trim()),
+      250,
+    );
+    return () => window.clearTimeout(timeoutId);
+  }, [customerSearch]);
+  const customers = useCustomers({
+    page: 1,
+    pageSize: 15,
+    search: debouncedCustomerSearch || undefined,
+  });
+  const services = useServices();
+  const settings = useSettings();
+  const createCustomer = useCreateCustomer();
+  const createOrder = useCreateOrder();
+  const activeServices =
+    services.data?.filter((service) => service.active) ?? [];
+  const estimatedSubtotal = useMemo(
+    () =>
+      lines.reduce((total, line) => {
+        const service = activeServices.find(
+          (item) => item.id === line.serviceId,
+        );
+        return (
+          total +
+          (service
+            ? estimateLineTotal(service, line.quantity, line.basketOptionId)
+            : 0)
+        );
+      }, 0),
+    [activeServices, lines],
+  );
+  const discountPesewas = Math.min(
+    estimatedSubtotal,
+    Math.round(discountGhs * 100),
+  );
+  const effectiveTaxBasisPoints =
+    taxBasisPoints ?? settings.data?.taxBasisPoints ?? 0;
+  const estimatedTax = Math.round(
+    (estimatedSubtotal - discountPesewas) * (effectiveTaxBasisPoints / 10_000),
+  );
+
+  function updateLine(key: number, changes: Partial<DraftLine>) {
+    setLines((current) =>
+      current.map((line) =>
+        line.key === key ? { ...line, ...changes } : line,
+      ),
+    );
+  }
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (step !== 3) return;
+    const form = new FormData(event.currentTarget);
+    try {
+      let selectedCustomerId = customerId;
+      if (newCustomer) {
+        const customer = await createCustomer.mutateAsync({
+          ...customerDraft,
+          email: customerDraft.email || undefined,
+        });
+        selectedCustomerId = customer.id;
+      }
+      const order = await createOrder.mutateAsync({
+        customerId: selectedCustomerId,
+        discountPesewas,
+        taxBasisPoints: effectiveTaxBasisPoints,
+        notes: String(form.get("notes")) || undefined,
+        lines: lines.map(({ serviceId, quantity, basketOptionId }) => ({
+          serviceId,
+          quantity:
+            activeServices.find((service) => service.id === serviceId)
+              ?.pricingModel === "flat_fee" || basketOptionId
+              ? undefined
+              : quantity,
+          basketOptionId,
+        })),
+      });
+      toast.success(`${order.orderNumber} created.`);
+      onCreated(order.id);
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Could not create order."));
+    }
+  }
+
+  const customerReady = newCustomer
+    ? Boolean(customerDraft.fullName && customerDraft.phone)
+    : Boolean(customerId);
+  const linesReady =
+    lines.length > 0 &&
+    lines.every((line) => {
+      const service = activeServices.find((item) => item.id === line.serviceId);
+      return (
+        Boolean(service) &&
+        (service?.pricingModel !== "basket" || Boolean(line.basketOptionId))
+      );
+    });
   return (
-    <div
-      className="modal-backdrop"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-    >
+    <div className="modal-backdrop">
       <section
-        className="order-modal"
+        className="order-modal order-wizard"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="modal-title"
+        aria-labelledby="create-order-title"
       >
         <div className="modal-header">
           <div>
-            <h2 id="modal-title">Create an order</h2>
-            <p>Add the customer's laundry and amount due.</p>
+            <h2 id="create-order-title">Create order</h2>
+            <p>
+              Step {step} of 3 ·{" "}
+              {step === 1 ? "Customer" : step === 2 ? "Services" : "Review"}
+            </p>
           </div>
-          <button className="icon-button" onClick={onClose} aria-label="Close">
-            <X size={19} />
+          <button className="icon-button" aria-label="Close" onClick={onClose}>
+            <X size={18} />
           </button>
         </div>
-        <form onSubmit={onSave}>
-          <label>
-            Customer name
-            <input
-              name="name"
-              autoFocus
-              placeholder="e.g. Taylor Morgan"
-              required
-            />
-          </label>
-          <div className="form-row">
-            <label>
-              Phone number
-              <input
-                name="phone"
-                placeholder="024 000 0000"
-                type="tel"
-                required
-              />
-            </label>
-          </div>
-          <label>
-            Amount to pay (GHS)
-            <input className="w-full" name="amountDue" type="number" min="0.01" step="0.01" placeholder="0.00" required />
-          </label>
-          <label>
-            Payment method
-            <CustomSelect name="payment">
-              <option>Cash</option>
-              <option>Mobile Money</option>
-              <option>Card</option>
-              <option>Bank transfer</option>
-              <option>Other</option>
-            </CustomSelect>
-          </label>
+        <form onSubmit={submit}>
+          {step === 1 && (
+            <div className="wizard-section">
+              <label>
+                Customer
+                <CustomerCombobox
+                  value={selectedCustomer?.fullName ?? customerSearch}
+                  customers={customers.data?.data ?? []}
+                  loading={customers.isFetching}
+                  onChange={(searchValue) => {
+                    setSelectedCustomer(null);
+                    setCustomerId("");
+                    setCustomerSearch(searchValue);
+                  }}
+                  onSelect={(customer) => {
+                    setSelectedCustomer(customer);
+                    setCustomerId(customer.id);
+                    setCustomerSearch("");
+                  }}
+                />
+              </label>
+              <button
+                type="button"
+                className="text-link"
+                onClick={() => {
+                  setNewCustomer((value) => !value);
+                  setCustomerId("");
+                  setSelectedCustomer(null);
+                  setCustomerSearch("");
+                }}
+              >
+                {newCustomer
+                  ? "Select an existing customer"
+                  : "Create customer inline"}
+              </button>
+              {newCustomer && (
+                <div className="form-grid">
+                  <label>
+                    Full name
+                    <input
+                      value={customerDraft.fullName}
+                      onChange={(event) =>
+                        setCustomerDraft((value) => ({
+                          ...value,
+                          fullName: event.target.value,
+                        }))
+                      }
+                      required
+                    />
+                  </label>
+                  <label>
+                    Phone
+                    <input
+                      value={customerDraft.phone}
+                      onChange={(event) =>
+                        setCustomerDraft((value) => ({
+                          ...value,
+                          phone: event.target.value,
+                        }))
+                      }
+                      required
+                    />
+                  </label>
+                  <label>
+                    Email
+                    <input
+                      type="email"
+                      value={customerDraft.email}
+                      onChange={(event) =>
+                        setCustomerDraft((value) => ({
+                          ...value,
+                          email: event.target.value,
+                        }))
+                      }
+                    />
+                  </label>
+                  <div className="customer-consent-options">
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={customerDraft.smsConsent}
+                        onChange={(event) =>
+                          setCustomerDraft((value) => ({
+                            ...value,
+                            smsConsent: event.target.checked,
+                          }))
+                        }
+                      />
+                      SMS updates
+                    </label>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={customerDraft.emailConsent}
+                        onChange={(event) =>
+                          setCustomerDraft((value) => ({
+                            ...value,
+                            emailConsent: event.target.checked,
+                          }))
+                        }
+                      />
+                      Email updates
+                    </label>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          {step === 2 && (
+            <div className="wizard-section">
+              {lines.map((line, index) => {
+                const service = activeServices.find(
+                  (item) => item.id === line.serviceId,
+                );
+                return (
+                  <fieldset key={line.key} className="service-line">
+                    <legend>Service {index + 1}</legend>
+                    <label>
+                      Service
+                      <CustomSelect
+                        value={line.serviceId}
+                        required
+                        onChange={(event) =>
+                          updateLine(line.key, {
+                            serviceId: event.target.value,
+                            basketOptionId: undefined,
+                            quantity: 1,
+                          })
+                        }
+                      >
+                        <option value="">Select service</option>
+                        {activeServices.map((item) => (
+                          <option key={item.id} value={item.id}>
+                            {item.name}
+                          </option>
+                        ))}
+                      </CustomSelect>
+                    </label>
+                    {service?.pricingModel === "basket" ? (
+                      <label>
+                        Basket size
+                        <CustomSelect
+                          value={line.basketOptionId ?? ""}
+                          required
+                          onChange={(event) =>
+                            updateLine(line.key, {
+                              basketOptionId: event.target.value,
+                            })
+                          }
+                        >
+                          <option value="">Select basket</option>
+                          {service.basketOptions
+                            .filter((option) => option.active !== false)
+                            .map((option) => (
+                              <option key={option.id} value={option.id}>
+                                {option.name} ·{" "}
+                                {formatCurrency(option.pricePesewas / 100)}
+                              </option>
+                            ))}
+                        </CustomSelect>
+                      </label>
+                    ) : service && service.pricingModel !== "flat_fee" ? (
+                      <label>
+                        {service.pricingModel === "per_weight"
+                          ? "Weight (kg)"
+                          : "Item quantity"}
+                        <input
+                          type="number"
+                          min="0.01"
+                          step={
+                            service.pricingModel === "per_weight" ? "0.01" : "1"
+                          }
+                          value={line.quantity}
+                          onChange={(event) =>
+                            updateLine(line.key, {
+                              quantity: Number(event.target.value),
+                            })
+                          }
+                        />
+                      </label>
+                    ) : null}
+                    <div className="service-line-footer">
+                      <b>
+                        {formatCurrency(
+                          (service
+                            ? estimateLineTotal(
+                                service,
+                                line.quantity,
+                                line.basketOptionId,
+                              )
+                            : 0) / 100,
+                        )}
+                      </b>
+                      <button
+                        type="button"
+                        className="icon-button"
+                        aria-label={`Remove service ${index + 1}`}
+                        disabled={lines.length === 1}
+                        onClick={() =>
+                          setLines((current) =>
+                            current.filter((item) => item.key !== line.key),
+                          )
+                        }
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </fieldset>
+                );
+              })}
+              <button
+                type="button"
+                className="button button-secondary"
+                onClick={() =>
+                  setLines((current) => [
+                    ...current,
+                    { key: Date.now(), serviceId: "", quantity: 1 },
+                  ])
+                }
+              >
+                <Plus size={16} />
+                Add service
+              </button>
+            </div>
+          )}
+          {step === 3 && (
+            <div className="wizard-section">
+              <h3>Review order</h3>
+              <p className="field-hint">
+                Review the customer, services, discount, and tax before creating
+                this order.
+              </p>
+              <div className="order-review-customer">
+                <b>
+                  {newCustomer
+                    ? customerDraft.fullName
+                    : customers.data?.data.find(
+                        (customer) => customer.id === customerId,
+                      )?.fullName}
+                </b>
+                <span>
+                  {newCustomer
+                    ? customerDraft.phone
+                    : customers.data?.data.find(
+                        (customer) => customer.id === customerId,
+                      )?.phone}
+                </span>
+              </div>
+              <ul>
+                {lines.map((line) => {
+                  const service = activeServices.find(
+                    (item) => item.id === line.serviceId,
+                  )!;
+                  return (
+                    <li key={line.key}>
+                      <span>{service.name}</span>
+                      <b>
+                        {formatCurrency(
+                          estimateLineTotal(
+                            service,
+                            line.quantity,
+                            line.basketOptionId,
+                          ) / 100,
+                        )}
+                      </b>
+                    </li>
+                  );
+                })}
+              </ul>
+              <div className="form-grid order-review-adjustments">
+                <label>
+                  Discount (GHS)
+                  <input
+                    type="number"
+                    min="0"
+                    max={estimatedSubtotal / 100}
+                    step="0.01"
+                    value={discountGhs}
+                    onChange={(event) =>
+                      setDiscountGhs(Number(event.target.value))
+                    }
+                  />
+                </label>
+                <label>
+                  Tax rate (%)
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={effectiveTaxBasisPoints / 100}
+                    onChange={(event) =>
+                      setTaxBasisPoints(
+                        Math.round(Number(event.target.value) * 100),
+                      )
+                    }
+                  />
+                </label>
+              </div>
+              <dl className="receipt-totals">
+                <div>
+                  <dt>Subtotal</dt>
+                  <dd>{formatCurrency(estimatedSubtotal / 100)}</dd>
+                </div>
+                <div>
+                  <dt>Discount</dt>
+                  <dd>-{formatCurrency(discountPesewas / 100)}</dd>
+                </div>
+                <div>
+                  <dt>Tax ({(effectiveTaxBasisPoints / 100).toFixed(2)}%)</dt>
+                  <dd>{formatCurrency(estimatedTax / 100)}</dd>
+                </div>
+                <div>
+                  <dt>Estimated total</dt>
+                  <dd>
+                    {formatCurrency(
+                      (estimatedSubtotal - discountPesewas + estimatedTax) /
+                        100,
+                    )}
+                  </dd>
+                </div>
+              </dl>
+              <label>
+                Order notes
+                <textarea name="notes" />
+              </label>
+            </div>
+          )}
           <div className="modal-actions">
             <button
               type="button"
               className="button button-secondary"
-              onClick={onClose}
+              onClick={() =>
+                step === 1 ? onClose() : setStep((value) => value - 1)
+              }
             >
-              Cancel
+              {step === 1 ? "Cancel" : "Back"}
             </button>
-            <button type="submit" className="button button-primary">
-              <Plus size={16} /> Save order
-            </button>
+            {step < 3 ? (
+              <button
+                type="button"
+                className="button button-primary"
+                disabled={step === 1 ? !customerReady : !linesReady}
+                onClick={() => setStep((value) => value + 1)}
+              >
+                Continue
+              </button>
+            ) : (
+              <button
+                className="button button-primary"
+                disabled={createOrder.isPending || createCustomer.isPending}
+              >
+                {createOrder.isPending ? "Creating…" : "Create order"}
+              </button>
+            )}
           </div>
         </form>
-      </section>
-    </div>
-  );
-}
-
-type ReceiptPreviewProps = { receipt: Receipt; onClose: () => void };
-
-export function ReceiptPreview({ receipt, onClose }: ReceiptPreviewProps) {
-  return (
-    <div
-      className="modal-backdrop"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-    >
-      <section
-        className="receipt-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="receipt-title"
-      >
-        <div className="receipt-success">
-          <span>
-            <Check size={18} />
-          </span>
-          Order saved · receipt created
-        </div>
-        <div className="receipt-paper">
-          <div className="receipt-brand">
-            <div className="brand-mark">
-              <WashingMachine size={18} />
-            </div>
-            <span>Fresh & Fold</span>
-          </div>
-          <div className="receipt-address">
-            18 Market Street · Downtown
-            <br />
-            (555) 018-2040
-          </div>
-          <h2 id="receipt-title">Receipt</h2>
-          <div className="receipt-meta">
-            <span>
-              Receipt <b>RC-{receipt.id.slice(3)}</b>
-            </span>
-            <span>
-              Order <b>{receipt.id}</b>
-            </span>
-            <span>Nov 13, 2026 · 10:42 AM</span>
-          </div>
-          <div className="receipt-rule" />
-          <p className="receipt-customer">
-            Customer <b>{receipt.name}</b>
-          </p>
-          <div className="receipt-item">
-            <span>
-              {receipt.items}
-            </span>
-            <b>{receipt.amount}</b>
-          </div>
-          <div className="receipt-rule" />
-          <div className="receipt-total">
-            <span>Total</span>
-            <b>{receipt.amount}</b>
-          </div>
-          <div className="receipt-payment">
-            Payment method <b>{receipt.payment}</b>
-          </div>
-          <div className="receipt-collect">
-            Expected pickup <b>Today, 5:00 PM</b>
-          </div>
-          <p className="receipt-thanks">Thank you for choosing Fresh & Fold.</p>
-        </div>
-        <div className="receipt-actions">
-          <button className="button button-secondary" onClick={onClose}>
-            Close
-          </button>
-          <button
-            className="button button-primary"
-            onClick={() => window.print()}
-          >
-            <Download size={15} /> Print / save PDF
-          </button>
-        </div>
       </section>
     </div>
   );

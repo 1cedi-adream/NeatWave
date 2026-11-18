@@ -1,25 +1,26 @@
-# Laundry Management Frontend
+# NeatWave frontend
 
-React, TypeScript, Vite, and Tailwind CSS frontend for the laundry management system. The app uses local sample data while the backend is unavailable. Orders and edits stay in browser memory and reset on refresh.
+React, TypeScript, Vite, Tailwind CSS, and TanStack Query client for NeatWave.
 
-## Run locally
+## Local setup
 
-```sh
-npm install
-npm run dev
-```
+1. Copy `.env.example` to `.env`.
+2. Run `npm install`.
+3. Start the backend API and worker.
+4. Run `npm run dev`.
 
-## Source map
+Set `VITE_SOCKET_URL` to the Socket.IO server origin (for local development,
+`http://localhost:4000`). The REST client continues to use
+`VITE_API_BASE_URL`. Realtime updates reconcile TanStack Query caches; REST
+remains available when the socket is reconnecting or offline.
 
-- `src/app/` — router, shared application layout, and providers.
-- `src/components/` — shared navigation and UI components.
-- `src/features/` — feature-owned pages, components, types, and order logic.
-- `src/features/*/pages/` — individual Overview, Orders, Customers, Services, Staff, Notifications, and Settings screens.
-- `src/hooks/` — application-wide hooks.
-- `src/lib/` — shared formatting and utility functions.
-- `src/services/` — API client configuration for the future backend.
-- `src/store/` — global session state.
-- `src/types/` and `src/constants/` — shared application types and constants.
-- `src/styles/` — global styles.
+The default API prefix is `/api/v1`. Configure `VITE_API_BASE_URL` when the API is hosted on another origin.
 
-`frontend/.env` enables mock-data mode and sets the future API base URL. The app does not call that API while mock mode is enabled.
+## Verification
+
+- `npm run build` — type-check and production build.
+- `npm test` — Vitest component and hook tests.
+- `npm run test:e2e` — Playwright smoke tests.
+- `npm run check` — formatting, tests, and build.
+
+Server state belongs in feature-local TanStack Query hooks. React state is reserved for transient interface state such as filters, forms, tabs, and dialogs.

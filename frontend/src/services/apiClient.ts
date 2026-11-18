@@ -1,9 +1,82 @@
-import axios from "axios";
+import axios, { type InternalAxiosRequestConfig } from "axios";
+import {
+  clearTokens,
+  getAccessToken,
+  getRefreshToken,
+  replaceRefreshToken,
+  setAccessToken,
+} from "@/features/auth/api/tokenStorage";
+import type { ApiResponse } from "@/types/api";
+
+type RetryRequest = InternalAxiosRequestConfig & { _retried?: boolean };
+let refreshPromise: Promise<string> | null = null;
 
 export const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "/api",
+  baseURL: import.meta.env.VITE_API_BASE_URL || "/api/v1",
   timeout: 15_000,
   headers: { "Content-Type": "application/json" },
 });
 
-export const mockDataEnabled = import.meta.env.VITE_USE_MOCK_DATA !== "false";
+async function refreshAccessToken() {
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) throw new Error("No refresh token");
+
+  const response = await axios.post<
+    ApiResponse<{ accessToken: string; refreshToken: string }>
+  >(`${apiClient.defaults.baseURL}/auth/refresh`, { refreshToken });
+
+  setAccessToken(response.data.data.accessToken);
+  replaceRefreshToken(response.data.data.refreshToken);
+
+  return response.data.data.accessToken;
+}
+
+apiClient.interceptors.request.use((config) => {
+  const token = getAccessToken();
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+
+apiClient.interceptors.response.use(undefined, async (error) => {
+  const request = error.config as RetryRequest | undefined;
+
+  const isSessionEndpoint =
+    request?.url?.endsWith("/auth/login") ||
+    request?.url?.endsWith("/auth/refresh");
+
+  if (
+    error.response?.status !== 401 ||
+    !request ||
+    request._retried ||
+    isSessionEndpoint
+  )
+    return Promise.reject(error);
+
+  request._retried = true;
+
+  try {
+    refreshPromise ??= refreshAccessToken().finally(() => {
+      refreshPromise = null;
+    });
+
+    request.headers.Authorization = `Bearer ${await refreshPromise}`;
+
+    return apiClient(request);
+  } catch (refreshError) {
+    clearTokens();
+    window.dispatchEvent(new Event("neatwave:session-expired"));
+    return Promise.reject(refreshError);
+  }
+});
+
+export async function restoreAccessToken() {
+  if (!getRefreshToken()) return false;
+
+  try {
+    await refreshAccessToken();
+    return true;
+  } catch {
+    clearTokens();
+    return false;
+  }
+}

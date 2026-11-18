@@ -1,0 +1,272 @@
+openapi: 3.1.0
+info:
+  title: NeatWave API
+  version: 0.1.0
+servers:
+  - url: /api/v1
+security:
+  - bearerAuth: []
+paths:
+  /auth/login:
+    post:
+      {
+        security: [],
+        summary: Sign in,
+        responses: { "200": { description: Session tokens and user } },
+      }
+  /auth/refresh:
+    post:
+      {
+        security: [],
+        summary: Rotate a refresh token,
+        responses: { "200": { description: New token pair } },
+      }
+  /auth/logout:
+    post:
+      {
+        security: [],
+        summary: Revoke a refresh token,
+        responses: { "204": { description: Signed out } },
+      }
+  /auth/forgot-password:
+    post:
+      {
+        security: [],
+        summary: Request password reset,
+        responses: { "200": { description: Request accepted } },
+      }
+  /auth/reset-password:
+    post:
+      {
+        security: [],
+        summary: Reset password,
+        responses: { "204": { description: Password reset } },
+      }
+  /auth/accept-invite:
+    post:
+      {
+        security: [],
+        summary: Accept a staff invitation,
+        responses: { "201": { description: Account and session created } },
+      }
+  /auth/me:
+    get:
+      {
+        summary: Get current user and membership,
+        responses: { "200": { description: Current user } },
+      }
+  /admin/tenants:
+    get:
+      {
+        summary: List tenants,
+        responses: { "200": { description: Tenant list } },
+      }
+    post:
+      {
+        summary: Provision tenant and first manager,
+        responses: { "201": { description: Tenant created } },
+      }
+  /admin/summary:
+    get:
+      {
+        summary: Get platform tenant and usage totals,
+        responses: { "200": { description: Platform summary } },
+      }
+  /admin/tenants/{id}:
+    get:
+      {
+        summary: Get tenant configuration and usage summary,
+        parameters: [{ $ref: "#/components/parameters/Id" }],
+        responses: { "200": { description: Tenant detail } },
+      }
+  /admin/tenants/{id}/status:
+    patch:
+      {
+        summary: Activate or deactivate a tenant,
+        parameters: [{ $ref: "#/components/parameters/Id" }],
+        responses: { "200": { description: Tenant updated } },
+      }
+  /customers:
+    get:
+      {
+        summary: Search and paginate customers,
+        responses: { "200": { description: Customer page } },
+      }
+    post:
+      {
+        summary: Create customer,
+        responses: { "201": { description: Customer created } },
+      }
+  /customers/{id}:
+    get:
+      {
+        summary: Get customer with order history,
+        parameters: [{ $ref: "#/components/parameters/Id" }],
+        responses: { "200": { description: Customer detail } },
+      }
+    patch:
+      {
+        summary: Update customer,
+        parameters: [{ $ref: "#/components/parameters/Id" }],
+        responses: { "200": { description: Customer updated } },
+      }
+  /services:
+    get:
+      {
+        summary: List configured services and prices,
+        responses: { "200": { description: Service list } },
+      }
+    post:
+      {
+        summary: Create a priced service,
+        responses: { "201": { description: Service created } },
+      }
+  /services/{id}:
+    patch:
+      {
+        summary: Update or deactivate service,
+        parameters: [{ $ref: "#/components/parameters/Id" }],
+        responses: { "200": { description: Service updated } },
+      }
+  /orders:
+    get:
+      {
+        summary: Search and paginate orders,
+        responses: { "200": { description: Order page } },
+      }
+    post:
+      {
+        summary: Price and create an order,
+        responses:
+          {
+            "201": { description: Order, receipt, and tracking token created },
+          },
+      }
+  /orders/{id}:
+    get:
+      {
+        summary: Get full order,
+        payment,
+        status,
+        and receipt detail,
+        parameters: [{ $ref: "#/components/parameters/Id" }],
+        responses: { "200": { description: Order detail } },
+      }
+  /orders/{id}/receipt.pdf:
+    get:
+      {
+        summary: Download an order receipt PDF (manager only),
+        parameters: [{ $ref: "#/components/parameters/Id" }],
+        responses:
+          {
+            "200":
+              { description: PDF receipt, content: { application/pdf: {} } },
+          },
+      }
+  /orders/{id}/status:
+    post:
+      {
+        summary: Advance or cancel order status,
+        parameters: [{ $ref: "#/components/parameters/Id" }],
+        responses: { "204": { description: Status changed } },
+      }
+  /orders/{id}/payments:
+    post:
+      {
+        summary: Record payment,
+        parameters: [{ $ref: "#/components/parameters/Id" }],
+        responses: { "201": { description: Payment recorded } },
+      }
+  /orders/{id}/payments/{paymentId}/refunds:
+    post:
+      {
+        summary: Record refund,
+        parameters:
+          [
+            { $ref: "#/components/parameters/Id" },
+            {
+              name: paymentId,
+              in: path,
+              required: true,
+              schema: { type: string, format: uuid },
+            },
+          ],
+        responses: { "201": { description: Refund recorded } },
+      }
+  /settings:
+    get:
+      {
+        summary: Get tenant settings,
+        responses: { "200": { description: Settings } },
+      }
+    patch:
+      {
+        summary: Update tenant settings,
+        responses: { "200": { description: Settings updated } },
+      }
+  /staff:
+    get:
+      {
+        summary: List tenant staff,
+        responses: { "200": { description: Staff list } },
+      }
+  /staff/invite:
+    post:
+      {
+        summary: Invite manager or staff member,
+        responses: { "201": { description: Invitation created } },
+      }
+  /dashboard:
+    get:
+      {
+        summary: Get tenant dashboard summary,
+        responses: { "200": { description: Dashboard summary } },
+      }
+  /notifications:
+    get:
+      {
+        summary: Get in-app notifications,
+        responses: { "200": { description: Notifications } },
+      }
+  /public/tracking/{token}:
+    get:
+      {
+        security: [],
+        summary: Get sanitized public order tracking,
+        parameters:
+          [{ name: token, in: path, required: true, schema: { type: string } }],
+        responses: { "200": { description: Tracking detail } },
+      }
+  /public/tracking/{token}/receipt.pdf:
+    get:
+      {
+        security: [],
+        summary: Download a receipt using the opaque public tracking token,
+        parameters:
+          [{ name: token, in: path, required: true, schema: { type: string } }],
+        responses:
+          {
+            "200":
+              { description: PDF receipt, content: { application/pdf: {} } },
+          },
+      }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  parameters:
+    Id:
+      {
+        name: id,
+        in: path,
+        required: true,
+        schema: { type: string, format: uuid },
+      }
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            { code: { type: string }, message: { type: string }, details: {} }

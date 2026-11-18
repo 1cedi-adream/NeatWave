@@ -1,0 +1,34 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1794760976661,
+      "tag": "0000_youthful_wrecking_crew",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1794851200000,
+      "tag": "0001_order_tracking_token",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795010064324,
+      "tag": "0002_careless_dexter_bennett",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1795015714520,
+      "tag": "0003_realtime_events",
+      "breakpoints": true
+    }
+  ]
+}

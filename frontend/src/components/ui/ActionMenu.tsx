@@ -23,7 +23,10 @@ export function ActionMenu({ label, actions }: ActionMenuProps) {
     if (!open) return;
 
     function closeOnOutsideClick(event: PointerEvent) {
-      if (!menuRef.current?.contains(event.target as Node) && !buttonRef.current?.contains(event.target as Node)) {
+      if (
+        !menuRef.current?.contains(event.target as Node) &&
+        !buttonRef.current?.contains(event.target as Node)
+      ) {
         setOpen(false);
       }
     }
@@ -63,7 +66,10 @@ export function ActionMenu({ label, actions }: ActionMenuProps) {
     }
     const bounds = buttonRef.current?.getBoundingClientRect();
     if (bounds) {
-      setPosition({ top: Math.max(8, Math.min(bounds.bottom + 6, window.innerHeight - 150)), right: Math.max(8, window.innerWidth - bounds.right) });
+      setPosition({
+        top: Math.max(8, Math.min(bounds.bottom + 6, window.innerHeight - 150)),
+        right: Math.max(8, window.innerWidth - bounds.right),
+      });
     }
     setOpen(true);
   }
@@ -81,22 +87,31 @@ export function ActionMenu({ label, actions }: ActionMenuProps) {
       >
         <MoreHorizontal size={18} />
       </button>
-      {open && createPortal(
-        <div ref={menuRef} className="fixed z-[80] min-w-44 rounded-lg border border-gray-200 bg-white p-1 shadow-lg" style={position} role="menu">
-          {actions.map((action) => (
-            <button
-              type="button"
-              role="menuitem"
-              key={action.label}
-              className={`block w-full rounded-md px-3 py-2 text-left text-sm transition hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-emerald-800 ${action.destructive ? "text-rose-700 hover:bg-rose-50" : "text-gray-800"}`}
-              onClick={() => { setOpen(false); action.onSelect(); }}
-            >
-              {action.label}
-            </button>
-          ))}
-        </div>,
-        document.body,
-      )}
+      {open &&
+        createPortal(
+          <div
+            ref={menuRef}
+            className="fixed z-[80] min-w-44 rounded-lg border border-gray-200 bg-white p-1 shadow-lg"
+            style={position}
+            role="menu"
+          >
+            {actions.map((action) => (
+              <button
+                type="button"
+                role="menuitem"
+                key={action.label}
+                className={`block w-full rounded-md px-3 py-2 text-left text-sm transition hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-emerald-800 ${action.destructive ? "text-rose-700 hover:bg-rose-50" : "text-gray-800"}`}
+                onClick={() => {
+                  setOpen(false);
+                  action.onSelect();
+                }}
+              >
+                {action.label}
+              </button>
+            ))}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

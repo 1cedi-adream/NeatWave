@@ -1,20 +1,87 @@
-import { useMemo, useState } from 'react'
-import { Bell, Check, CheckCheck, Clock3, PackageCheck, WashingMachine } from 'lucide-react'
-import { PageHeader } from '../../../components/shared/PageHeader'
-import { toast } from 'sonner'
-import { useNotificationStore, type ShopNotification } from '../stores/notificationStore'
+import { Bell } from "lucide-react";
+import { toast } from "sonner";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { PanelSkeleton } from "@/components/shared/LoadingSkeletons";
+import { getApiErrorMessage } from "@/lib/apiError";
+import { formatDateTime } from "@/lib/formatDate";
+import {
+  useMarkAllNotificationsRead,
+  useMarkNotificationRead,
+  useNotifications,
+} from "../hooks/useNotifications";
+import { useCurrentUser } from "@/features/auth/hooks/useAuth";
+import { DeliveryStatusPanel } from "../components/DeliveryStatusPanel";
 
 export default function NotificationsPage() {
-  const items = useNotificationStore(state => state.items)
-  const markAllRead = useNotificationStore(state => state.markAllRead)
-  const toggleRead = useNotificationStore(state => state.toggleRead)
-  const [filter, setFilter] = useState('All activity')
-  const unread = items.filter(item => !item.read).length
-  const visible = useMemo(() => items.filter(item => filter === 'All activity' || (filter === 'Unread' ? !item.read : item.read)), [items, filter])
-  const Icon = ({ kind }: { kind: ShopNotification['kind'] }) => kind === 'ready' ? <PackageCheck size={18}/> : kind === 'delay' ? <Clock3 size={18}/> : <WashingMachine size={18}/>
-  return <div className="page-content">
-    <PageHeader title="Notifications" description="Order updates and shop activity." action={<button className="button button-secondary" disabled={!unread} onClick={() => { markAllRead(); toast.success('All notifications marked as read.'); }}><CheckCheck size={16}/> Mark all read</button>}/>
-    <div className="notification-summary"><span className="notification-summary-icon"><Bell size={19}/></span><div><b>{unread} unread updates</b><small>Sample activity · read states stay in this session</small></div><span className="notification-summary-count">{unread}</span></div>
-    <section className="panel notification-panel"><div className="notification-toolbar"><div className="segmented">{['All activity', 'Unread', 'Read'].map(name => <button type="button" key={name} className={filter === name ? 'selected' : ''} aria-pressed={filter === name} onClick={() => setFilter(name)}>{name}</button>)}</div></div><div className="notification-list">{visible.map(item => <article className={`notification-row ${item.read ? 'is-read' : ''}`} key={item.id}><span className={`notification-kind notification-${item.kind}`}><Icon kind={item.kind}/></span><div className="notification-copy"><b>{item.title}</b><p>{item.detail}</p><small>{item.time}</small></div>{!item.read && <span className="unread-dot" aria-label="Unread"/>}<button className="row-action" aria-pressed={item.read} onClick={() => toggleRead(item.id)}>{item.read ? 'Mark unread' : <><Check size={14}/> Mark read</>}</button></article>)}</div>{visible.length === 0 && <div className="empty-state"><Check size={22}/><b>You’re all caught up</b><span>No notifications in this view.</span></div>}</section>
-  </div>
+  const notifications = useNotifications();
+  const markRead = useMarkNotificationRead();
+  const markAllRead = useMarkAllNotificationsRead();
+  const currentUser = useCurrentUser();
+  const unreadCount =
+    notifications.data?.filter((notification) => !notification.readAt).length ??
+    0;
+
+  return (
+    <div className="page-content">
+      <PageHeader
+        title="Notifications"
+        description="Order activity that needs your team’s attention."
+        action={
+          <button
+            className="button button-secondary"
+            disabled={!unreadCount || markAllRead.isPending}
+            onClick={() =>
+              markAllRead.mutate(undefined, {
+                onSuccess: () =>
+                  toast.success("All notifications marked as read."),
+                onError: (error) => toast.error(getApiErrorMessage(error)),
+              })
+            }
+          >
+            Mark all read
+          </button>
+        }
+      />
+      <section className="panel">
+        {notifications.isPending ? (
+          <PanelSkeleton label="Loading notifications" />
+        ) : notifications.isError ? (
+          <div className="empty-state">
+            <b>Notifications could not be loaded</b>
+            <button onClick={() => void notifications.refetch()}>Retry</button>
+          </div>
+        ) : notifications.data?.length ? (
+          <ul className="notification-list">
+            {notifications.data.map((notification) => (
+              <li
+                key={notification.id}
+                className={notification.readAt ? "" : "is-unread"}
+              >
+                <div>
+                  <b>{notification.title}</b>
+                  <p>{notification.message}</p>
+                  <small>{formatDateTime(notification.createdAt)}</small>
+                </div>
+                {!notification.readAt && (
+                  <button
+                    disabled={markRead.isPending}
+                    onClick={() => markRead.mutate(notification.id)}
+                  >
+                    Mark read
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="empty-state">
+            <Bell size={22} />
+            <b>No notifications</b>
+            <span>New order activity will appear here.</span>
+          </div>
+        )}
+      </section>
+      {currentUser.data?.tenantRole === "manager" && <DeliveryStatusPanel />}
+    </div>
+  );
 }

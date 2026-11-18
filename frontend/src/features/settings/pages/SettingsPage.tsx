@@ -1,54 +1,160 @@
-import { useState } from "react";
-import { Building2, ReceiptText, Save, Settings2 } from "lucide-react";
-import { PageHeader } from "../../../components/shared/PageHeader";
+import { useEffect, useState, type SubmitEvent } from "react";
 import { toast } from "sonner";
-
-const sections = [
-  { id: "business", label: "Business details", icon: Building2 },
-  { id: "orders", label: "Order preferences", icon: Settings2 },
-  { id: "receipts", label: "Receipts", icon: ReceiptText },
-] as const;
-
-type SectionId = (typeof sections)[number]["id"];
+import { PageHeader } from "@/components/shared/PageHeader";
+import { PanelSkeleton } from "@/components/shared/LoadingSkeletons";
+import { getApiErrorMessage } from "@/lib/apiError";
+import { useSettings, useUpdateSettings } from "../hooks/useSettings";
+import type { BusinessSettings } from "../types/businessSettings";
 
 export default function SettingsPage() {
-  const [activeSection, setActiveSection] = useState<SectionId>("business");
-  const [business, setBusiness] = useState({ name: "Fresh & Fold", address: "18 Market Street, Downtown", phone: "(555) 018-2040", email: "hello@freshandfold.com", tax: "0", completion: "24", footer: "Thank you for choosing Fresh & Fold.", showContact: true });
-  const update = (field: keyof typeof business, value: string) => setBusiness((current) => ({ ...current, [field]: value }));
+  const settings = useSettings();
+  const updateSettings = useUpdateSettings();
+  const [formKey, setFormKey] = useState(0);
+
+  useEffect(() => {
+    if (settings.data) setFormKey((key) => key + 1);
+  }, [settings.data]);
+
+  function submit(event: SubmitEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!settings.data) return;
+    const form = new FormData(event.currentTarget);
+    const changes: Partial<BusinessSettings> = {};
+    const textFields = [
+      "businessName",
+      "address",
+      "phone",
+      "email",
+      "receiptFooter",
+    ] as const;
+    for (const fieldName of textFields) {
+      const nextValue = String(form.get(fieldName) ?? "");
+      if (nextValue !== settings.data[fieldName])
+        changes[fieldName] = nextValue;
+    }
+    const completionHours = Number(form.get("defaultCompletionHours"));
+    if (completionHours !== settings.data.defaultCompletionHours) {
+      changes.defaultCompletionHours = completionHours;
+    }
+    for (const fieldName of [
+      "showContactOnReceipt",
+      "smsEnabled",
+      "emailEnabled",
+    ] as const) {
+      const nextValue = form.get(fieldName) === "on";
+      if (nextValue !== settings.data[fieldName])
+        changes[fieldName] = nextValue;
+    }
+    if (!Object.keys(changes).length) {
+      toast.info("There are no settings changes to save.");
+      return;
+    }
+    updateSettings.mutate(changes, {
+      onSuccess: () => toast.success("Settings saved."),
+      onError: (error) =>
+        toast.error(getApiErrorMessage(error, "Could not save settings.")),
+    });
+  }
 
   return (
     <div className="page-content">
-      <PageHeader title="Settings" description="Business details and order preferences." action={<button className="button button-primary" onClick={() => toast.success("Settings updated in this demo view.")}><Save size={16} /> Save changes</button>} />
-      <p className="mb-4 text-xs text-gray-600">Sample preferences. Backend saving is not connected.</p>
-      <div className="settings-layout settings-tabs-layout">
-        <nav className="settings-nav" role="tablist" aria-label="Settings sections">
-          {sections.map(({ id, label, icon: Icon }) => (
-            <button key={id} type="button" role="tab" id={`settings-tab-${id}`} aria-controls={`settings-panel-${id}`} aria-selected={activeSection === id} className={activeSection === id ? "selected" : ""} onClick={() => setActiveSection(id)}>
-              <Icon size={17} />{label}
+      <PageHeader
+        title="Settings"
+        description="Manage business details, receipts, and customer update channels."
+      />
+      {settings.isPending ? (
+        <section className="panel">
+          <PanelSkeleton label="Loading settings" />
+        </section>
+      ) : settings.isError ? (
+        <section className="panel empty-state">
+          <b>Settings could not be loaded</b>
+          <button onClick={() => void settings.refetch()}>Retry</button>
+        </section>
+      ) : (
+        settings.data && (
+          <form key={formKey} className="settings-form" onSubmit={submit}>
+            <section className="panel">
+              <h2>Business details</h2>
+              <label>
+                Business name
+                <input
+                  name="businessName"
+                  defaultValue={settings.data.businessName}
+                />
+              </label>
+              <label>
+                Address
+                <input name="address" defaultValue={settings.data.address} />
+              </label>
+              <label>
+                Phone
+                <input name="phone" defaultValue={settings.data.phone} />
+              </label>
+              <label>
+                Email
+                <input
+                  name="email"
+                  type="email"
+                  defaultValue={settings.data.email}
+                />
+              </label>
+            </section>
+            <section className="panel">
+              <h2>Orders and receipts</h2>
+              <label>
+                Default completion time (hours)
+                <input
+                  name="defaultCompletionHours"
+                  type="number"
+                  min="1"
+                  defaultValue={settings.data.defaultCompletionHours}
+                />
+              </label>
+              <label>
+                Receipt footer
+                <textarea
+                  name="receiptFooter"
+                  defaultValue={settings.data.receiptFooter}
+                />
+              </label>
+              <label>
+                <input
+                  name="showContactOnReceipt"
+                  type="checkbox"
+                  defaultChecked={settings.data.showContactOnReceipt}
+                />{" "}
+                Show contact details on receipts
+              </label>
+            </section>
+            <section className="panel">
+              <h2>Customer updates</h2>
+              <label>
+                <input
+                  name="smsEnabled"
+                  type="checkbox"
+                  defaultChecked={settings.data.smsEnabled}
+                />{" "}
+                Enable SMS
+              </label>
+              <label>
+                <input
+                  name="emailEnabled"
+                  type="checkbox"
+                  defaultChecked={settings.data.emailEnabled}
+                />{" "}
+                Enable email
+              </label>
+            </section>
+            <button
+              className="button button-primary"
+              disabled={updateSettings.isPending}
+            >
+              {updateSettings.isPending ? "Saving…" : "Save settings"}
             </button>
-          ))}
-        </nav>
-        <div className="settings-sections">
-          {activeSection === "business" && (
-            <section className="panel settings-panel" role="tabpanel" id="settings-panel-business" aria-labelledby="settings-tab-business">
-              <div className="settings-panel-heading"><span className="settings-icon"><Building2 size={18} /></span><div><h2>Business details</h2><p>Shown on order receipts and customer communications.</p></div></div>
-              <div className="settings-fields"><label>Business name<input value={business.name} onChange={(event) => update("name", event.target.value)} /></label><label>Business address<input value={business.address} onChange={(event) => update("address", event.target.value)} /></label><div className="form-row"><label>Phone number<input value={business.phone} onChange={(event) => update("phone", event.target.value)} /></label><label>Email address<input type="email" value={business.email} onChange={(event) => update("email", event.target.value)} /></label></div><div className="settings-readonly"><span>Currency</span><b>GHS — Ghanaian cedi</b></div></div>
-            </section>
-          )}
-          {activeSection === "orders" && (
-            <section className="panel settings-panel" role="tabpanel" id="settings-panel-orders" aria-labelledby="settings-tab-orders">
-              <div className="settings-panel-heading"><span className="settings-icon settings-icon-blue"><Settings2 size={18} /></span><div><h2>Order preferences</h2><p>Set defaults for new laundry orders.</p></div></div>
-              <div className="settings-fields"><label>Default completion time<input type="number" min="1" value={business.completion} onChange={(event) => update("completion", event.target.value)} /><small className="field-hint">Hours from the time an order is received.</small></label><label>Tax rate (%)<input type="number" min="0" max="100" step="0.1" value={business.tax} onChange={(event) => update("tax", event.target.value)} /></label><div className="settings-readonly"><span>Order number format</span><b>WD-0000</b></div></div>
-            </section>
-          )}
-          {activeSection === "receipts" && (
-            <section className="panel settings-panel" role="tabpanel" id="settings-panel-receipts" aria-labelledby="settings-tab-receipts">
-              <div className="settings-panel-heading"><span className="settings-icon settings-icon-peach"><ReceiptText size={18} /></span><div><h2>Receipt details</h2><p>Receipt information is included after an order is created.</p></div></div>
-              <div className="settings-fields"><div className="settings-readonly"><span>Receipt number format</span><b>RC-0000</b></div><label>Receipt footer<input value={business.footer} onChange={(event) => update("footer", event.target.value)} /></label><label className="toggle-setting"><span><b>Show business contact details</b><small>Print your phone and address on each receipt.</small></span><input type="checkbox" checked={business.showContact} onChange={(event) => setBusiness((current) => ({ ...current, showContact: event.target.checked }))} /></label></div>
-            </section>
-          )}
-        </div>
-      </div>
+          </form>
+        )
+      )}
     </div>
   );
 }

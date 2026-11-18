@@ -24,7 +24,9 @@ export function CustomSelect({
   const status = variant === "status";
 
   return (
-    <span className={`relative inline-flex min-w-0 items-center ${compact ? "flex-1" : status ? "w-fit" : "w-full"}`}>
+    <span
+      className={`relative inline-flex min-w-0 items-center ${compact ? "flex-1" : status ? "w-fit" : "w-full"}`}
+    >
       <select
         className={`appearance-none ${selectStyles[variant]} ${className}`.trim()}
         {...props}

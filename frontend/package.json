@@ -5,28 +5,38 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "format": "prettier --write .",
     "build": "tsc --noEmit && vite build",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "check": "prettier --check . && npm run test && npm run build",
     "preview": "vite preview"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.0.0",
     "@vitejs/plugin-react": "latest",
     "axios": "^1.7.0",
-    "chart.js": "^4.6.1",
     "lucide-react": "^0.468.0",
     "react": "latest",
-    "react-chartjs-2": "^5.3.1",
     "react-dom": "latest",
     "react-router-dom": "^7.0.0",
+    "socket.io-client": "^4.8.4",
     "sonner": "^2.0.8",
-    "vite": "latest",
-    "zustand": "^5.0.0"
+    "vite": "latest"
   },
   "devDependencies": {
+    "@playwright/test": "^1.65.1",
     "@tailwindcss/vite": "^4.1.0",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.12",
     "@types/react": "latest",
     "@types/react-dom": "latest",
+    "jsdom": "^29.1.1",
+    "msw": "^3.0.6",
+    "prettier": "^3.10.1",
     "tailwindcss": "^4.1.0",
-    "typescript": "latest"
+    "typescript": "latest",
+    "vitest": "^5.1.0"
   }
 }

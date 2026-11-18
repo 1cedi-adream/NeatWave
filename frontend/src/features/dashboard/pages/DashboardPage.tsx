@@ -1,154 +1,182 @@
-import { Suspense, lazy, useState } from "react";
-import type { FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useMemo, useState } from "react";
 import {
-  Activity,
-  ArrowRight,
   Check,
   Clock3,
-  Download,
   Plus,
+  Search,
   Users,
   WashingMachine,
 } from "lucide-react";
-import { StatCard } from "../../../components/shared/StatCard";
-import { PageHeader } from "../../../components/shared/PageHeader";
+import { PageHeader } from "@/components/shared/PageHeader";
 import {
-  CreateOrderDialog,
-  ReceiptPreview,
-} from "../../orders/components/CreateOrderDialog";
-import { useOrderStore } from "../../../store/orderStore";
-import { useSessionStore } from "../../../store/sessionStore";
-import { downloadOrdersCsv } from "../../orders/lib/downloadOrdersCsv";
-import type { Receipt } from "../../orders/types/order";
-import { toast } from "sonner";
-import { formatCurrency } from "../../../lib/formatCurrency";
-
-const OrderStatusChart = lazy(() => import("../components/OrderStatusChart"));
+  CardSkeletonGrid,
+  TableSkeleton,
+} from "@/components/shared/LoadingSkeletons";
+import { StatCard } from "@/components/shared/StatCard";
+import { formatCurrency } from "@/lib/formatCurrency";
+import { formatDateTime } from "@/lib/formatDate";
+import { useCurrentUser } from "@/features/auth/hooks/useAuth";
+import { useDashboard } from "../hooks/useDashboard";
+import { CreateOrderDialog } from "@/features/orders/components/CreateOrderDialog";
 
 export default function DashboardPage() {
-  const navigate = useNavigate();
-  const orders = useOrderStore((state) => state.orders);
-  const createOrder = useOrderStore((state) => state.createOrder);
-  const user = useSessionStore((state) => state.user);
-  const inProgressOrders = orders.filter((order) => order.status === "Washing" || order.status === "Out for Delivery");
-  const readyOrders = orders.filter((order) => order.status === "Ready for Pickup");
-  const orderValue = orders.reduce((total, order) => total + Number(order.amount.replace(/[^\d.]/g, "")), 0);
-  const [createOpen, setCreateOpen] = useState(false);
-  const [receipt, setReceipt] = useState<Receipt | null>(null);
-  const onSaveOrder = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    const result = createOrder(
-      String(data.get("name")).trim(),
-      String(data.get("phone")).trim(),
-      "Items not specified",
-      Number(data.get("amountDue")),
-      String(data.get("payment")),
+  const [orderSearch, setOrderSearch] = useState("");
+  const [showCreateOrder, setShowCreateOrder] = useState(false);
+  const { data: user } = useCurrentUser();
+  const { data, isPending, isError, refetch } = useDashboard();
+  const filteredReadyOrders = useMemo(() => {
+    const searchValue = orderSearch.trim().toLowerCase();
+    if (!searchValue) return data?.readyOrders ?? [];
+    return (data?.readyOrders ?? []).filter((order) =>
+      order.orderNumber.toLowerCase().includes(searchValue),
     );
-    setCreateOpen(false);
-    setReceipt(result);
-    event.currentTarget.reset();
-  };
+  }, [data?.readyOrders, orderSearch]);
+
+  if (isPending)
+    return (
+      <div className="page-content">
+        <PageHeader
+          title="Shop overview"
+          description="Review current shop activity."
+        />
+        <CardSkeletonGrid label="Loading dashboard cards" />
+        <section className="panel">
+          <div className="panel-heading">
+            <div>
+              <h2>Ready orders</h2>
+              <p>Orders awaiting customer pickup.</p>
+            </div>
+          </div>
+          <TableSkeleton label="Loading ready orders" columns={3} rows={4} />
+        </section>
+      </div>
+    );
+
+  if (isError)
+    return (
+      <div className="page-content">
+        <PageHeader
+          title="Shop overview"
+          description="Review current shop activity."
+        />
+        <div className="empty-state panel" role="alert">
+          <b>Dashboard could not be loaded</b>
+          <span>Check your connection, then try again.</span>
+          <button
+            className="button button-secondary"
+            onClick={() => void refetch()}
+          >
+            Retry dashboard
+          </button>
+        </div>
+      </div>
+    );
+
+  const washing =
+    data?.ordersByStatus.find((item) => item.status === "Washing")?.value ?? 0;
+
   return (
     <div className="page-content">
       <PageHeader
         title={`Hello, ${user?.name.split(" ")[0] ?? "there"}`}
-        description="Review the current orders and shop activity."
-        action={
-          <>
-            <button
-              className="button button-secondary"
-              onClick={() => { downloadOrdersCsv(orders); toast.success("Order list downloaded."); }}
-            >
-              <Download size={16} /> Export
-            </button>
-            <button
-              className="button button-primary"
-              onClick={() => setCreateOpen(true)}
-            >
-              <Plus size={17} /> New order
-            </button>
-          </>
-        }
+        description="Review current shop activity."
       />
       <div className="stats-row">
         <StatCard
-          label="Sample orders"
-          value={String(orders.length)}
-          caption="in the current order list"
+          label="Orders"
+          value={String(data?.totalOrders ?? 0)}
+          caption="all orders"
           icon={<WashingMachine size={18} />}
           tone="mint"
         />
         <StatCard
-          label="In progress"
-          value={String(inProgressOrders.length)}
-          caption="washing, drying or ironing"
+          label="Washing"
+          value={String(washing)}
+          caption="in progress"
           icon={<Clock3 size={18} />}
           tone="lavender"
         />
         <StatCard
           label="Ready for pickup"
-          value={String(readyOrders.length)}
-          caption="ready for pickup"
+          value={String(data?.readyOrders.length ?? 0)}
+          caption="awaiting collection"
           icon={<Check size={18} />}
           tone="peach"
         />
         <StatCard
-          label="Listed order value"
-          value={formatCurrency(orderValue)}
-          caption="total value in sample orders"
-          icon={<Activity size={18} />}
+          label="Order value"
+          value={formatCurrency((data?.totalOrderValuePesewas ?? 0) / 100)}
+          caption={`${data?.customerCount ?? 0} customers`}
+          icon={<Users size={18} />}
           tone="sky"
         />
       </div>
-      <div className="overview-grid">
-        <Suspense fallback={<section className="panel status-chart-panel" aria-busy="true"><div className="panel-heading"><div><h2>Orders by status</h2><p>Loading current order totals…</p></div></div><div className="status-chart-canvas animate-pulse rounded-lg bg-gray-50" /></section>}>
-          <OrderStatusChart orders={orders} onViewOrders={() => navigate("/orders")} />
-        </Suspense>
-        <div className="right-column">
-          <section className="pickup-card">
-            <div className="pickup-head">
-              <div className="pickup-icon">
-                <Clock3 size={17} />
-              </div>
-              <span>UP NEXT</span>
-            </div>
-            <div className="pickup-time">
-              {readyOrders[0]?.due.split(", ").slice(1).join(", ") ?? "—"}
-            </div>
-            <h3>{readyOrders.length ? `${readyOrders.length} ${readyOrders.length === 1 ? "order" : "orders"} ready for pickup` : "No orders ready for pickup"}</h3>
-            <p>{readyOrders.length ? "Review the current ready orders." : "Ready orders will appear here."}</p>
-            <button onClick={() => navigate("/orders?status=ready")}>
-              Review ready orders <ArrowRight size={15} />
-            </button>
-          </section>
-          <section className="panel order-records-card">
-            <div className="lower-title">
-              <span className="lower-icon"><Users size={18} /></span>
-              <span>
-                <b>Order records</b>
-                <small>Sample data for this session</small>
-              </span>
-            </div>
-            <div className="repeat-number">
-              <b>{orders.length}</b>
-              <span>sample orders</span>
-            </div>
-            <button className="text-link" onClick={() => navigate("/customers")}>
-              Customer list <ArrowRight size={15} />
-            </button>
-          </section>
-        </div>
+      <div className="overview-order-toolbar">
+        <label className="search-field">
+          <Search size={17} aria-hidden="true" />
+          <input
+            aria-label="Search ready orders"
+            placeholder="Search ready orders"
+            value={orderSearch}
+            onChange={(event) => setOrderSearch(event.target.value)}
+          />
+        </label>
+        <button
+          type="button"
+          className="button button-primary"
+          onClick={() => setShowCreateOrder(true)}
+        >
+          <Plus size={16} />
+          Create an order
+        </button>
       </div>
-      {createOpen && (
+      <section className="panel directory-panel">
+        <div className="panel-heading">
+          <div>
+            <h2>Ready orders</h2>
+            <p>Orders awaiting customer pickup.</p>
+          </div>
+        </div>
+        {filteredReadyOrders.length ? (
+          <div className="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>ORDER</th>
+                  <th>DUE</th>
+                  <th>TOTAL</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredReadyOrders.map((order) => (
+                  <tr key={order.id}>
+                    <td>{order.orderNumber}</td>
+                    <td>{formatDateTime(order.dueAt)}</td>
+                    <td>{formatCurrency(order.totalPesewas / 100)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="empty-state">
+            <Check size={22} />
+            <b>
+              {orderSearch ? "No matching ready orders" : "No orders ready"}
+            </b>
+            <span>
+              {orderSearch
+                ? "Try a different order number."
+                : "Ready orders will appear here."}
+            </span>
+          </div>
+        )}
+      </section>
+      {showCreateOrder && (
         <CreateOrderDialog
-          onClose={() => setCreateOpen(false)}
-          onSave={onSaveOrder}
+          onClose={() => setShowCreateOrder(false)}
+          onCreated={() => setShowCreateOrder(false)}
         />
-      )}
-      {receipt && (
-        <ReceiptPreview receipt={receipt} onClose={() => setReceipt(null)} />
       )}
     </div>
   );
