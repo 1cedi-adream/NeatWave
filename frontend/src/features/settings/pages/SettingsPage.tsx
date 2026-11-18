@@ -3,13 +3,16 @@ import { toast } from "sonner";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { PanelSkeleton } from "@/components/shared/LoadingSkeletons";
 import { getApiErrorMessage } from "@/lib/apiError";
+import { useCurrentUser } from "@/features/auth/hooks/useAuth";
 import { useSettings, useUpdateSettings } from "../hooks/useSettings";
 import type { BusinessSettings } from "../types/businessSettings";
 
 export default function SettingsPage() {
   const settings = useSettings();
   const updateSettings = useUpdateSettings();
+  const currentUser = useCurrentUser();
   const [formKey, setFormKey] = useState(0);
+  const canManage = currentUser.data?.tenantRole === "manager";
 
   useEffect(() => {
     if (settings.data) setFormKey((key) => key + 1);
@@ -60,7 +63,11 @@ export default function SettingsPage() {
     <div className="page-content">
       <PageHeader
         title="Settings"
-        description="Manage business details, receipts, and customer update channels."
+        description={
+          canManage
+            ? "Manage business details, receipts, and customer update channels."
+            : "View receipt and customer update settings configured by your manager."
+        }
       />
       {settings.isPending ? (
         <section className="panel">
@@ -72,7 +79,8 @@ export default function SettingsPage() {
           <button onClick={() => void settings.refetch()}>Retry</button>
         </section>
       ) : (
-        settings.data && (
+        settings.data &&
+        (canManage ? (
           <form key={formKey} className="settings-form" onSubmit={submit}>
             <section className="panel">
               <h2>Business details</h2>
@@ -153,7 +161,42 @@ export default function SettingsPage() {
               {updateSettings.isPending ? "Saving…" : "Save settings"}
             </button>
           </form>
-        )
+        ) : (
+          <div className="settings-readonly">
+            <section className="panel">
+              <h2>Orders and receipts</h2>
+              <dl className="settings-summary">
+                <div>
+                  <dt>Default completion time</dt>
+                  <dd>{settings.data.defaultCompletionHours} hours</dd>
+                </div>
+                <div>
+                  <dt>Receipt footer</dt>
+                  <dd>{settings.data.receiptFooter || "No footer set"}</dd>
+                </div>
+                <div>
+                  <dt>Contact details on receipts</dt>
+                  <dd>
+                    {settings.data.showContactOnReceipt ? "Shown" : "Hidden"}
+                  </dd>
+                </div>
+              </dl>
+            </section>
+            <section className="panel">
+              <h2>Customer updates</h2>
+              <dl className="settings-summary">
+                <div>
+                  <dt>SMS updates</dt>
+                  <dd>{settings.data.smsEnabled ? "Enabled" : "Disabled"}</dd>
+                </div>
+                <div>
+                  <dt>Email updates</dt>
+                  <dd>{settings.data.emailEnabled ? "Enabled" : "Disabled"}</dd>
+                </div>
+              </dl>
+            </section>
+          </div>
+        ))
       )}
     </div>
   );

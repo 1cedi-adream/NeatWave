@@ -39,3 +39,12 @@ export function renderStatusMessage(
     text: `Your order ${statusPayload.orderNumber} from ${statusPayload.businessName} is ${statusPayload.status}. You can track its status using this link: ${statusPayload.trackingUrl}.${receiptLink}`,
   };
 }
+
+export function renderSafeDeliveryMessage(payload: unknown, template: string) {
+  return renderStatusMessage(payload, template)
+    .text.replace(
+      /(\/accept-invite\/)[A-Za-z0-9_-]+/g,
+      "$1[secure invitation link]",
+    )
+    .replace(/(\/reset-password\/)[A-Za-z0-9_-]+/g, "$1[secure reset link]");
+}

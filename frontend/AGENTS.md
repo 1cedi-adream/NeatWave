@@ -1,4 +1,4 @@
-# Project Instructions — Fresh & Fold
+# Project Instructions — NeatWave
 
 ## Primary Development Standard
 
@@ -17,7 +17,7 @@ Before editing any frontend or visual design code, the agent MUST read and follo
 
 `DESIGN_SKILLS.md`
 
-This file defines the Fresh & Fold visual identity, Tailwind CSS conventions, page-specific interfaces, accessibility, responsive behavior, and design consistency.
+This file defines the NeatWave visual identity, Tailwind CSS conventions, page-specific interfaces, accessibility, responsive behavior, and design consistency.
 
 ## Mandatory Agent Workflow
 
@@ -28,7 +28,7 @@ Before implementing any frontend task:
 3. Inspect the existing project structure and understand its conventions.
 4. Identify the appropriate feature, components, hooks, and utilities.
 5. Implement the requested changes using the handbook's recommended architecture.
-6. Maintain Fresh & Fold's established visual direction.
+6. Maintain NeatWave's established visual direction.
 7. Verify TypeScript, linting, responsiveness, accessibility, and build requirements where applicable.
 
 ## Strict Requirements

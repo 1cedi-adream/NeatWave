@@ -5,10 +5,12 @@ import {
   inAppNotifications,
   notificationAttempts,
   notificationJobs,
+  orders,
 } from "@/db/schema/index.js";
 import { notFound } from "@/utils/errors.js";
 import { enqueueRealtimeEvent } from "@/modules/realtime/realtime.service.js";
 import { realtimeRooms } from "@/modules/realtime/realtime.types.js";
+import { renderSafeDeliveryMessage } from "./notifications.utils.js";
 
 export async function list(req: Request, res: Response) {
   res.json({
@@ -67,12 +69,34 @@ export async function markAll(req: Request, res: Response) {
 }
 
 export async function deliveries(req: Request, res: Response) {
-  const data = await db
-    .select()
+  const deliveryRows = await db
+    .select({
+      id: notificationJobs.id,
+      orderNumber: orders.orderNumber,
+      channel: notificationJobs.channel,
+      template: notificationJobs.template,
+      payload: notificationJobs.payload,
+      state: notificationJobs.state,
+      attempts: notificationJobs.attempts,
+      sentAt: notificationJobs.sentAt,
+      createdAt: notificationJobs.createdAt,
+    })
     .from(notificationJobs)
+    .leftJoin(
+      orders,
+      and(
+        eq(orders.id, notificationJobs.orderId),
+        eq(orders.tenantId, notificationJobs.tenantId),
+      ),
+    )
     .where(eq(notificationJobs.tenantId, req.auth!.tenantId!))
     .orderBy(desc(notificationJobs.createdAt))
     .limit(100);
+
+  const data = deliveryRows.map(({ payload, template, ...delivery }) => ({
+    ...delivery,
+    message: renderSafeDeliveryMessage(payload, template),
+  }));
   res.json({ data });
 }
 

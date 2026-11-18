@@ -86,7 +86,7 @@ export default function LoginPage() {
               <WashingMachine size={19} />
             </span>
             <span className="font-display text-lg font-bold tracking-tight">
-              Fresh & Fold
+              NeatWave
             </span>
           </div>
           <div className="relative mt-auto max-w-md pt-8">
@@ -117,7 +117,7 @@ export default function LoginPage() {
               </h2>
               <p className="mt-2 text-sm leading-6 text-gray-600">
                 {mode === "login"
-                  ? "Sign in to your Fresh & Fold account."
+                  ? "Sign in to your NeatWave account."
                   : "Enter your email or phone to receive reset instructions."}
               </p>
             </div>

@@ -33,6 +33,7 @@ export function AppLayout() {
         mobileOpen={mobileOpen}
         onNavigate={onNavigate}
         onClose={() => setMobileOpen(false)}
+        isSigningOut={logout.isPending}
         onLogout={() =>
           logout.mutate(undefined, {
             onSettled: () => navigate("/login", { replace: true }),

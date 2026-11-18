@@ -11,6 +11,7 @@ import CustomerOrderHistoryPage from "@/features/customers/pages/CustomerOrderHi
 import ServicesPage from "@/features/services/pages/ServicesPage";
 import StaffPage from "@/features/staff/pages/StaffPage";
 import NotificationsPage from "@/features/notifications/pages/NotificationsPage";
+import MessageDeliveriesPage from "@/features/notifications/pages/MessageDeliveriesPage";
 import SettingsPage from "@/features/settings/pages/SettingsPage";
 import LoginPage from "@/features/auth/pages/LoginPage";
 import ProfilePage from "@/features/auth/pages/ProfilePage";
@@ -27,6 +28,7 @@ import { RealtimeProvider } from "@/features/realtime/providers/RealtimeProvider
 export function AppRouter() {
   const [ready, setReady] = useState(false);
   const [canFetch, setCanFetch] = useState(false);
+  const [hasEndedSession, setHasEndedSession] = useState(false);
   const queryClient = useQueryClient();
   useEffect(() => {
     void restoreAccessToken().then((restored) => {
@@ -37,11 +39,20 @@ export function AppRouter() {
   const userQuery = useCurrentUser(canFetch);
   useEffect(() => {
     const expire = () => {
+      setHasEndedSession(true);
       setCanFetch(false);
       queryClient.clear();
     };
+    const startSession = () => {
+      setHasEndedSession(false);
+      setCanFetch(true);
+    };
     window.addEventListener("neatwave:session-expired", expire);
-    return () => window.removeEventListener("neatwave:session-expired", expire);
+    window.addEventListener("neatwave:session-started", startSession);
+    return () => {
+      window.removeEventListener("neatwave:session-expired", expire);
+      window.removeEventListener("neatwave:session-started", startSession);
+    };
   }, [queryClient]);
   if (!ready || (canFetch && userQuery.isPending))
     return (
@@ -49,7 +60,7 @@ export function AppRouter() {
         Loading workspace…
       </main>
     );
-  const user = userQuery.data;
+  const user = hasEndedSession ? undefined : userQuery.data;
   return (
     <RealtimeProvider user={user}>
       <Routes>
@@ -108,6 +119,10 @@ export function AppRouter() {
           <Route path="services" element={<ServicesPage />} />
           <Route path="staff" element={<StaffPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
+          <Route
+            path="notifications/messages"
+            element={<MessageDeliveriesPage />}
+          />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="*" element={<Navigate to="/" replace />} />

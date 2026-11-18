@@ -16,12 +16,12 @@ export function DeliveryStatusPanel() {
     <section className="panel delivery-panel">
       <div className="panel-heading">
         <div>
-          <h2>Customer message delivery</h2>
-          <p>Recent SMS and email delivery attempts.</p>
+          <h2>Message delivery history</h2>
+          <p>Recent SMS and email messages, including staff invitations.</p>
         </div>
       </div>
       {deliveries.isPending ? (
-        <TableSkeleton label="Loading message deliveries" columns={5} />
+        <TableSkeleton label="Loading message deliveries" columns={7} />
       ) : deliveries.isError ? (
         <div className="empty-state">
           <b>Message deliveries could not be loaded</b>
@@ -34,7 +34,8 @@ export function DeliveryStatusPanel() {
               <tr>
                 <th>CREATED</th>
                 <th>CHANNEL</th>
-                <th>ORDER</th>
+                <th>RELATED ORDER OR INVITATION</th>
+                <th>MESSAGE</th>
                 <th>STATUS</th>
                 <th>ATTEMPTS</th>
                 <th>ACTION</th>
@@ -54,7 +55,16 @@ export function DeliveryStatusPanel() {
                       {delivery.channel === "email" ? "Email" : "SMS"}
                     </span>
                   </td>
-                  <td>{delivery.orderId?.slice(0, 8) ?? "Invitation"}</td>
+                  <td>{delivery.orderNumber ?? "Staff invitation"}</td>
+                  <td>
+                    <span
+                      className="delivery-message-preview"
+                      title={delivery.message}
+                      aria-label={delivery.message}
+                    >
+                      {truncateMessage(delivery.message)}
+                    </span>
+                  </td>
                   <td>
                     <span className={`delivery-state is-${delivery.state}`}>
                       {delivery.state}
@@ -103,4 +113,11 @@ export function DeliveryStatusPanel() {
       )}
     </section>
   );
+}
+
+function truncateMessage(message: string) {
+  const previewLength = 96;
+  return message.length > previewLength
+    ? `${message.slice(0, previewLength)}…`
+    : message;
 }

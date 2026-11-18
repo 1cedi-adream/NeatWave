@@ -62,7 +62,7 @@ export default function AcceptInvitePage() {
           <span className="invite-brand-mark">
             <WashingMachine size={20} />
           </span>
-          <span>Fresh &amp; Fold</span>
+          <span>NeatWave</span>
         </header>
 
         <div className="invite-heading">

@@ -2,13 +2,16 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryKeys";
 import {
   clearTokens,
+  getAccessToken,
   getRefreshToken,
   setAccessToken,
   storeRefreshToken,
 } from "../api/tokenStorage";
 import * as authApi from "../api/authApi";
 
-export function useCurrentUser(enabled = true) {
+export function useCurrentUser(
+  enabled = Boolean(getAccessToken() || getRefreshToken()),
+) {
   return useQuery({
     queryKey: queryKeys.currentUser,
     queryFn: authApi.getCurrentUser,
@@ -36,22 +39,33 @@ export function useLogin() {
     },
     onSuccess: (currentUser) => {
       queryClient.setQueryData(queryKeys.currentUser, currentUser);
+      window.dispatchEvent(new Event("neatwave:session-started"));
     },
   });
 }
 
 export function useLogout() {
-  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async () => {
       const token = getRefreshToken();
-      if (token) await authApi.logout(token);
+
+      const logoutRequest = token
+        ? authApi.logout(token).catch(() => undefined)
+        : Promise.resolve();
+
+      await Promise.all([wait(160), Promise.race([logoutRequest, wait(500)])]);
     },
     onSettled: () => {
       clearTokens();
-      queryClient.clear();
+      window.dispatchEvent(new Event("neatwave:session-expired"));
     },
   });
+}
+
+function wait(durationMilliseconds: number) {
+  return new Promise<void>((resolve) =>
+    window.setTimeout(resolve, durationMilliseconds),
+  );
 }
 
 export function useForgotPassword() {
@@ -73,6 +87,7 @@ export function useAcceptInvitation() {
         queryKeys.currentUser,
         await authApi.getCurrentUser(),
       );
+      window.dispatchEvent(new Event("neatwave:session-started"));
     },
   });
 }

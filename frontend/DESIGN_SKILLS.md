@@ -1,5 +1,5 @@
 ---
-name: Fresh & Fold Washday
+name: NeatWave
 description: Calm, practical, and warm design system for a laundry shop team managing orders, customers, services, staff, and daily activity.
 
 colors:
@@ -84,7 +84,7 @@ components:
 
 ## Overview
 
-Fresh & Fold Washday is a practical back-office tool for a laundry shop team. It should feel calm, warm, and clear, the way a well-run counter feels. Screens prioritize the task at hand: finding an order, updating a customer, checking staff or daily activity. Decoration stays minimal. The brand's forest green anchors the interface, and small orange accents mark attention without shouting.
+NeatWave is a practical back-office tool for laundry teams. It should feel calm, warm, and clear, the way a well-run counter feels. Screens prioritize the task at hand: finding an order, updating a customer, checking staff or daily activity. Decoration stays minimal. The brand's forest green anchors the interface, and small orange accents mark attention without shouting.
 
 Copy is direct and specific to the shop. It uses real app language ("Ready for pickup," "Add service," "Mark as collected") and avoids marketing phrasing, slogans, and filler labels. Sample data is realistic and honest. The backend is not running, so demo-only behavior is labeled where users need to know.
 

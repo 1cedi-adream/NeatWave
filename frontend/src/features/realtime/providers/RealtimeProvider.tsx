@@ -51,9 +51,7 @@ export function RealtimeProvider({
     const handleRealtimeEvent = (event: RealtimeEvent) => {
       saveCursor(event.id);
       if (event.type === "access.revoked") {
-        clearTokens();
-        queryClient.clear();
-        window.dispatchEvent(new Event("neatwave:session-expired"));
+        expireSession();
         return;
       }
       void reconcileQueries(queryClient, event, trackingToken);
@@ -68,18 +66,14 @@ export function RealtimeProvider({
     };
 
     const handleAuthRevoked = () => {
-      clearTokens();
-      queryClient.clear();
-      window.dispatchEvent(new Event("neatwave:session-expired"));
+      expireSession();
     };
 
     const handleAuthRefreshRequired = () => {
       if (!user?.id) return;
       void restoreAccessToken().then((restored) => {
         if (!restored) {
-          clearTokens();
-          queryClient.clear();
-          window.dispatchEvent(new Event("neatwave:session-expired"));
+          expireSession();
         }
       });
     };
@@ -107,9 +101,7 @@ export function RealtimeProvider({
       void restoreAccessToken()
         .then((restored) => {
           if (!restored) {
-            clearTokens();
-            queryClient.clear();
-            window.dispatchEvent(new Event("neatwave:session-expired"));
+            expireSession();
             return;
           }
           socket?.connect();
@@ -117,6 +109,11 @@ export function RealtimeProvider({
         .finally(() => {
           refreshingAccess = false;
         });
+    };
+
+    const expireSession = () => {
+      clearTokens();
+      window.dispatchEvent(new Event("neatwave:session-expired"));
     };
 
     const handleAccessTokenChanged = () => {

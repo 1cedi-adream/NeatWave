@@ -1,4 +1,5 @@
-import { Bell } from "lucide-react";
+import { Bell, Mail } from "lucide-react";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { PanelSkeleton } from "@/components/shared/LoadingSkeletons";
@@ -10,7 +11,6 @@ import {
   useNotifications,
 } from "../hooks/useNotifications";
 import { useCurrentUser } from "@/features/auth/hooks/useAuth";
-import { DeliveryStatusPanel } from "../components/DeliveryStatusPanel";
 
 export default function NotificationsPage() {
   const notifications = useNotifications();
@@ -27,19 +27,30 @@ export default function NotificationsPage() {
         title="Notifications"
         description="Order activity that needs your team’s attention."
         action={
-          <button
-            className="button button-secondary"
-            disabled={!unreadCount || markAllRead.isPending}
-            onClick={() =>
-              markAllRead.mutate(undefined, {
-                onSuccess: () =>
-                  toast.success("All notifications marked as read."),
-                onError: (error) => toast.error(getApiErrorMessage(error)),
-              })
-            }
-          >
-            Mark all read
-          </button>
+          <div className="flex flex-wrap gap-2">
+            {currentUser.data?.tenantRole === "manager" && (
+              <Link
+                className="button button-secondary"
+                to="/notifications/messages"
+              >
+                <Mail size={16} />
+                View Messages
+              </Link>
+            )}
+            <button
+              className="button button-secondary"
+              disabled={!unreadCount || markAllRead.isPending}
+              onClick={() =>
+                markAllRead.mutate(undefined, {
+                  onSuccess: () =>
+                    toast.success("All notifications marked as read."),
+                  onError: (error) => toast.error(getApiErrorMessage(error)),
+                })
+              }
+            >
+              Mark all read
+            </button>
+          </div>
         }
       />
       <section className="panel">
@@ -81,7 +92,6 @@ export default function NotificationsPage() {
           </div>
         )}
       </section>
-      {currentUser.data?.tenantRole === "manager" && <DeliveryStatusPanel />}
     </div>
   );
 }

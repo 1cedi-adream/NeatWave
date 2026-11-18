@@ -25,6 +25,9 @@ async function refreshAccessToken() {
     ApiResponse<{ accessToken: string; refreshToken: string }>
   >(`${apiClient.defaults.baseURL}/auth/refresh`, { refreshToken });
 
+  if (getRefreshToken() !== refreshToken)
+    throw new Error("The session changed while refreshing its access token");
+
   setAccessToken(response.data.data.accessToken);
   replaceRefreshToken(response.data.data.refreshToken);
 
@@ -42,7 +45,8 @@ apiClient.interceptors.response.use(undefined, async (error) => {
 
   const isSessionEndpoint =
     request?.url?.endsWith("/auth/login") ||
-    request?.url?.endsWith("/auth/refresh");
+    request?.url?.endsWith("/auth/refresh") ||
+    request?.url?.endsWith("/auth/logout");
 
   if (
     error.response?.status !== 401 ||
@@ -53,30 +57,37 @@ apiClient.interceptors.response.use(undefined, async (error) => {
     return Promise.reject(error);
 
   request._retried = true;
+  const refreshTokenBeforeRequest = getRefreshToken();
 
   try {
     refreshPromise ??= refreshAccessToken().finally(() => {
       refreshPromise = null;
     });
 
-    request.headers.Authorization = `Bearer ${await refreshPromise}`;
+    const refreshedAccessToken = await refreshPromise;
+    if (getRefreshToken() !== refreshTokenBeforeRequest)
+      throw new Error("The session changed while retrying the request");
+    request.headers.Authorization = `Bearer ${refreshedAccessToken}`;
 
     return apiClient(request);
   } catch (refreshError) {
-    clearTokens();
-    window.dispatchEvent(new Event("neatwave:session-expired"));
+    if (getRefreshToken() === refreshTokenBeforeRequest) {
+      clearTokens();
+      window.dispatchEvent(new Event("neatwave:session-expired"));
+    }
     return Promise.reject(refreshError);
   }
 });
 
 export async function restoreAccessToken() {
-  if (!getRefreshToken()) return false;
+  const refreshTokenBeforeRestore = getRefreshToken();
+  if (!refreshTokenBeforeRestore) return false;
 
   try {
     await refreshAccessToken();
     return true;
   } catch {
-    clearTokens();
+    if (getRefreshToken() === refreshTokenBeforeRestore) clearTokens();
     return false;
   }
 }

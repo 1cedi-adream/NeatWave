@@ -1,7 +1,6 @@
 import { Bell, Menu, Search } from "lucide-react";
 import { useCurrentUser } from "@/features/auth/hooks/useAuth";
 import { useNotifications } from "@/features/notifications/hooks/useNotifications";
-import { RealtimeConnectionBadge } from "@/features/realtime/components/RealtimeConnectionBadge";
 
 type TopBarProps = {
   section: string;
@@ -41,7 +40,6 @@ export function TopBar({
         Workspace <span>/</span> <b>{section}</b>
       </div>
       <div className="top-actions">
-        <RealtimeConnectionBadge />
         <button
           className="top-icon"
           aria-label="Search orders"

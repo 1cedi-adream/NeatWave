@@ -2,8 +2,10 @@ import {
   Activity,
   ArrowRight,
   Bell,
+  Building2,
   CircleHelp,
   LayoutDashboard,
+  LoaderCircle,
   LogOut,
   Settings,
   Shirt,
@@ -34,6 +36,7 @@ type SidebarProps = {
   onNavigate: (label: string) => void;
   onClose: () => void;
   onLogout: () => void;
+  isSigningOut: boolean;
 };
 
 export function Sidebar({
@@ -42,11 +45,16 @@ export function Sidebar({
   onNavigate,
   onClose,
   onLogout,
+  isSigningOut,
 }: SidebarProps) {
   const { data: user } = useCurrentUser();
   const { data: settings } = useSettings();
   const { data: dashboard } = useDashboard();
   const { data: notifications = [] } = useNotifications();
+  const visibleManagementNavigation =
+    user?.tenantRole === "manager"
+      ? managementNavigation
+      : managementNavigation.filter(({ label }) => label !== "Staff");
   const orderCount = dashboard?.totalOrders ?? 0;
   const unreadCount = notifications.filter((item) => !item.readAt).length;
   const initials =
@@ -76,7 +84,7 @@ export function Sidebar({
         </div>
         <div className="location-switch">
           <span className="location-icon">
-            <span />
+            <Building2 size={16} strokeWidth={2} />
           </span>
           <span className="location-copy">
             <b>{settings?.businessName ?? "Laundry"}</b>
@@ -100,7 +108,7 @@ export function Sidebar({
         </nav>
         <div className="nav-label tools-label">MANAGE</div>
         <nav>
-          {managementNavigation.map(({ label, icon: Icon }) => (
+          {visibleManagementNavigation.map(({ label, icon: Icon }) => (
             <button
               type="button"
               key={label}
@@ -123,7 +131,7 @@ export function Sidebar({
             </div>
             <b>Need help?</b>
             <p>Contact the NeatWave team about your laundry account.</p>
-            <a href="mailto:hello@freshandfold.com">
+            <a href="mailto:hello@neatwave.com">
               Email support <ArrowRight size={13} />
             </a>
           </div>
@@ -136,12 +144,19 @@ export function Sidebar({
               </small>
             </span>
             <button
-              className="ml-auto rounded-md p-2 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800"
+              type="button"
+              disabled={isSigningOut}
+              aria-busy={isSigningOut}
+              className="ml-auto rounded-md p-2 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800 disabled:cursor-wait disabled:opacity-60"
               onClick={onLogout}
-              title="Sign out"
-              aria-label="Sign out"
+              title={isSigningOut ? "Signing out" : "Sign out"}
+              aria-label={isSigningOut ? "Signing out" : "Sign out"}
             >
-              <LogOut size={17} />
+              {isSigningOut ? (
+                <LoaderCircle size={17} className="animate-spin" />
+              ) : (
+                <LogOut size={17} />
+              )}
             </button>
           </div>
         </div>

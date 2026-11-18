@@ -9,7 +9,8 @@ export type Notification = {
 
 export type NotificationDelivery = {
   id: string;
-  orderId: string | null;
+  orderNumber: string | null;
+  message: string;
   channel: "sms" | "email";
   state: "pending" | "processing" | "sent" | "failed";
   attempts: number;

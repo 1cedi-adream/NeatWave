@@ -1,7 +1,6 @@
-import { Building2, LayoutDashboard, LogOut } from "lucide-react";
+import { Building2, LayoutDashboard, LoaderCircle, LogOut } from "lucide-react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useLogout } from "@/features/auth/hooks/useAuth";
-import { RealtimeConnectionBadge } from "@/features/realtime/components/RealtimeConnectionBadge";
 
 export default function AdminLayout() {
   const logout = useLogout();
@@ -23,14 +22,23 @@ export default function AdminLayout() {
             Laundries
           </NavLink>
         </nav>
-        <RealtimeConnectionBadge />
         <button
+          type="button"
+          className="disabled:cursor-wait disabled:opacity-60"
+          disabled={logout.isPending}
+          aria-busy={logout.isPending}
           onClick={() =>
-            logout.mutate(undefined, { onSettled: () => navigate("/login") })
+            logout.mutate(undefined, {
+              onSettled: () => navigate("/login", { replace: true }),
+            })
           }
         >
-          <LogOut size={17} />
-          Sign out
+          {logout.isPending ? (
+            <LoaderCircle size={17} className="animate-spin" />
+          ) : (
+            <LogOut size={17} />
+          )}
+          {logout.isPending ? "Signing out…" : "Sign out"}
         </button>
       </aside>
       <main className="admin-main">

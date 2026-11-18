@@ -78,7 +78,11 @@ export default function ServicesPage() {
     <div className="page-content">
       <PageHeader
         title="Services"
-        description="Configure the work your laundry offers and how each service is priced."
+        description={
+          canManage
+            ? "Configure the work your laundry offers and how each service is priced."
+            : "Review the laundry services and pricing available to your team."
+        }
         action={
           canManage && (
             <button

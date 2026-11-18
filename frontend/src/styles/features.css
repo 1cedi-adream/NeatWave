@@ -25,6 +25,34 @@
   @apply grid gap-2 text-sm font-semibold text-gray-700;
 }
 
+.settings-readonly {
+  @apply grid gap-5;
+}
+
+.settings-readonly .panel {
+  @apply grid gap-4 rounded-[14px] p-5 sm:p-6;
+}
+
+.settings-readonly .panel h2 {
+  @apply font-display text-lg font-bold text-ink;
+}
+
+.settings-summary {
+  @apply grid gap-3 sm:grid-cols-2;
+}
+
+.settings-summary > div {
+  @apply grid content-start gap-1 rounded-lg bg-gray-50 p-4;
+}
+
+.settings-summary dt {
+  @apply text-xs font-semibold uppercase tracking-wide text-gray-500;
+}
+
+.settings-summary dd {
+  @apply whitespace-pre-wrap text-sm text-gray-900;
+}
+
 .notification-list {
   @apply divide-y divide-gray-200;
 }
@@ -1160,7 +1188,7 @@ form label:has(textarea:not([required])) > textarea {
 }
 
 .delivery-panel {
-  @apply mt-5 overflow-hidden;
+  @apply overflow-hidden;
 }
 
 .delivery-channel {
@@ -1190,6 +1218,10 @@ form label:has(textarea:not([required])) > textarea {
 
 .delivery-sent-date {
   @apply whitespace-nowrap text-xs text-muted;
+}
+
+.delivery-message-preview {
+  @apply block max-w-[360px] cursor-help overflow-hidden text-ellipsis whitespace-nowrap text-sm text-gray-700;
 }
 
 .receipt-totals > div:last-child {
@@ -2025,7 +2057,7 @@ form label:has(textarea:not([required])) > textarea {
   }
   .settings-fields input:not([type="checkbox"]),
   .settings-fields select {
-    @apply h-11 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900;
+    @apply h-11 w-full min-w-0 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900;
   }
   .field-hint {
     @apply text-xs font-normal text-gray-600;

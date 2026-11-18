@@ -74,7 +74,7 @@ export default function CreateTenantPage() {
                 name="name"
                 required
                 minLength={2}
-                placeholder="Fresh & Fold Laundry"
+                placeholder="NeatWave Laundry"
                 autoFocus
               />
               <span>The business name shown throughout the workspace.</span>
@@ -87,7 +87,7 @@ export default function CreateTenantPage() {
                   name="slug"
                   required
                   pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
-                  placeholder="fresh-and-fold"
+                  placeholder="laundry-name"
                   aria-describedby="slug-help"
                   onBlur={(event) => {
                     event.currentTarget.value = normalizeSlug(
