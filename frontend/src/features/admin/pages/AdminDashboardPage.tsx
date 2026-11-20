@@ -3,10 +3,12 @@ import { Link } from "react-router-dom";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { formatDate } from "@/lib/formatDate";
 import { StatCard } from "@/components/shared/StatCard";
+import { Pagination, usePagination } from "@/components/shared/Pagination";
 import { useAdminSummary } from "../hooks/useAdmin";
 
 export default function AdminDashboardPage() {
   const summary = useAdminSummary();
+  const pagination = usePagination(summary.data?.recentTenants ?? []);
   if (summary.isPending)
     return (
       <div className="page-content admin-dashboard-loading" aria-busy="true">
@@ -106,7 +108,7 @@ export default function AdminDashboardPage() {
               </tr>
             </thead>
             <tbody>
-              {summary.data?.recentTenants.map((tenant) => (
+              {pagination.items.map((tenant) => (
                 <tr key={tenant.id}>
                   <td>
                     <Link to={`/admin/laundries/${tenant.id}`}>
@@ -121,6 +123,7 @@ export default function AdminDashboardPage() {
             </tbody>
           </table>
         </div>
+        <Pagination {...pagination} label="laundries" />
       </section>
     </div>
   );

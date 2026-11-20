@@ -2,6 +2,7 @@ import { Download, ExternalLink, LoaderCircle, X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { TableSkeleton } from "@/components/shared/LoadingSkeletons";
+import { Pagination, usePagination } from "@/components/shared/Pagination";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { formatDateTime } from "@/lib/formatDate";
 import { getApiErrorMessage } from "@/lib/apiError";
@@ -19,6 +20,8 @@ export function OrderDetailDialog({
   const order = useOrder(orderId);
   const currentUser = useCurrentUser();
   const [isDownloading, setIsDownloading] = useState(false);
+  const linePagination = usePagination(order.data?.lines ?? []);
+  const historyPagination = usePagination(order.data?.statusHistory ?? []);
 
   async function handleDownloadReceipt() {
     if (!order.data) return;
@@ -123,7 +126,7 @@ export function OrderDetailDialog({
                   </tr>
                 </thead>
                 <tbody>
-                  {order.data.lines.map((line) => (
+                  {linePagination.items.map((line) => (
                     <tr key={line.id}>
                       <td>{line.serviceName}</td>
                       <td>
@@ -138,17 +141,19 @@ export function OrderDetailDialog({
                 </tbody>
               </table>
             </div>
+            <Pagination {...linePagination} label="services" />
             <div className="receipt-summary-layout">
               <section className="receipt-status-history">
                 <h3>Status history</h3>
                 <ul className="receipt-history-list">
-                  {order.data.statusHistory.map((event) => (
+                  {historyPagination.items.map((event) => (
                     <li key={`${event.toStatus}-${event.createdAt}`}>
                       <b>{event.toStatus}</b>
                       <span>{formatDateTime(event.createdAt)}</span>
                     </li>
                   ))}
                 </ul>
+                <Pagination {...historyPagination} label="status events" />
               </section>
               <dl className="receipt-totals receipt-detail-totals">
                 <div>
@@ -189,21 +194,22 @@ export function OrderDetailDialog({
                   Open public tracking
                 </a>
               )}
-              {currentUser.data?.tenantRole === "manager" && (
-                <button
-                  type="button"
-                  className="button button-primary"
-                  onClick={() => void handleDownloadReceipt()}
-                  disabled={isDownloading}
-                >
-                  {isDownloading ? (
-                    <LoaderCircle size={16} className="animate-spin" />
-                  ) : (
-                    <Download size={16} />
-                  )}
-                  {isDownloading ? "Generating receipt…" : "Generate Receipt"}
-                </button>
-              )}
+              {currentUser.data?.tenantRole === "manager" &&
+                order.data.status === "Ready for Pickup" && (
+                  <button
+                    type="button"
+                    className="button button-primary"
+                    onClick={() => void handleDownloadReceipt()}
+                    disabled={isDownloading}
+                  >
+                    {isDownloading ? (
+                      <LoaderCircle size={16} className="animate-spin" />
+                    ) : (
+                      <Download size={16} />
+                    )}
+                    {isDownloading ? "Generating receipt…" : "Generate Receipt"}
+                  </button>
+                )}
             </div>
           </div>
         )}

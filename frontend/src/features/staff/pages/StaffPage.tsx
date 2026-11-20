@@ -3,6 +3,7 @@ import { Plus, UserRound, X } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { TableSkeleton } from "@/components/shared/LoadingSkeletons";
+import { Pagination, usePagination } from "@/components/shared/Pagination";
 import { CustomSelect } from "@/components/ui/CustomSelect";
 import { getApiErrorMessage } from "@/lib/apiError";
 import { useInviteStaff, useStaff, useUpdateStaff } from "../hooks/useStaff";
@@ -10,6 +11,7 @@ import { useInviteStaff, useStaff, useUpdateStaff } from "../hooks/useStaff";
 export default function StaffPage() {
   const [showInvite, setShowInvite] = useState(false);
   const staff = useStaff();
+  const pagination = usePagination(staff.data ?? []);
   const inviteStaff = useInviteStaff();
   const updateStaff = useUpdateStaff();
 
@@ -56,66 +58,69 @@ export default function StaffPage() {
             <button onClick={() => void staff.refetch()}>Retry</button>
           </div>
         ) : staff.data?.length ? (
-          <div className="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>TEAM MEMBER</th>
-                  <th>CONTACT</th>
-                  <th>ROLE</th>
-                  <th>STATUS</th>
-                  <th>ACTION</th>
-                </tr>
-              </thead>
-              <tbody>
-                {staff.data.map((member) => (
-                  <tr key={member.membershipId}>
-                    <td>
-                      <b>{member.name}</b>
-                    </td>
-                    <td>
-                      {member.email}
-                      <br />
-                      <small>{member.phone}</small>
-                    </td>
-                    <td>
-                      <span
-                        className={`role-tag ${member.role.toLowerCase() === "manager" ? "role-manager" : ""}`}
-                      >
-                        {member.role.toLowerCase() === "manager"
-                          ? "Manager"
-                          : "Staff"}
-                      </span>
-                    </td>
-                    <td>{member.active ? "Active" : "Inactive"}</td>
-                    <td>
-                      <button
-                        disabled={updateStaff.isPending}
-                        onClick={() =>
-                          updateStaff.mutate(
-                            {
-                              membershipId: member.membershipId,
-                              active: !member.active,
-                            },
-                            {
-                              onSuccess: () =>
-                                toast.success(
-                                  member.active
-                                    ? "Staff access deactivated."
-                                    : "Staff access restored.",
-                                ),
-                            },
-                          )
-                        }
-                      >
-                        {member.active ? "Deactivate" : "Activate"}
-                      </button>
-                    </td>
+          <>
+            <div className="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>TEAM MEMBER</th>
+                    <th>CONTACT</th>
+                    <th>ROLE</th>
+                    <th>STATUS</th>
+                    <th>ACTION</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {pagination.items.map((member) => (
+                    <tr key={member.membershipId}>
+                      <td>
+                        <b>{member.name}</b>
+                      </td>
+                      <td>
+                        {member.email}
+                        <br />
+                        <small>{member.phone}</small>
+                      </td>
+                      <td>
+                        <span
+                          className={`role-tag ${member.role.toLowerCase() === "manager" ? "role-manager" : ""}`}
+                        >
+                          {member.role.toLowerCase() === "manager"
+                            ? "Manager"
+                            : "Staff"}
+                        </span>
+                      </td>
+                      <td>{member.active ? "Active" : "Inactive"}</td>
+                      <td>
+                        <button
+                          disabled={updateStaff.isPending}
+                          onClick={() =>
+                            updateStaff.mutate(
+                              {
+                                membershipId: member.membershipId,
+                                active: !member.active,
+                              },
+                              {
+                                onSuccess: () =>
+                                  toast.success(
+                                    member.active
+                                      ? "Staff access deactivated."
+                                      : "Staff access restored.",
+                                  ),
+                              },
+                            )
+                          }
+                        >
+                          {member.active ? "Deactivate" : "Activate"}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <Pagination {...pagination} label="staff members" />
+          </>
         ) : (
           <div className="empty-state">
             <UserRound size={22} />

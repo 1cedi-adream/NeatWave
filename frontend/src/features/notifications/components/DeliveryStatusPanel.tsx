@@ -1,6 +1,7 @@
 import { LoaderCircle, Mail, MessageSquareText, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { TableSkeleton } from "@/components/shared/LoadingSkeletons";
+import { Pagination, usePagination } from "@/components/shared/Pagination";
 import { getApiErrorMessage } from "@/lib/apiError";
 import { formatDateTime } from "@/lib/formatDate";
 import {
@@ -11,6 +12,7 @@ import {
 export function DeliveryStatusPanel() {
   const deliveries = useNotificationDeliveries();
   const retryDelivery = useRetryNotificationDelivery();
+  const pagination = usePagination(deliveries.data ?? []);
 
   return (
     <section className="panel delivery-panel">
@@ -28,82 +30,85 @@ export function DeliveryStatusPanel() {
           <button onClick={() => void deliveries.refetch()}>Retry</button>
         </div>
       ) : deliveries.data.length ? (
-        <div className="table-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>CREATED</th>
-                <th>CHANNEL</th>
-                <th>RELATED ORDER OR INVITATION</th>
-                <th>MESSAGE</th>
-                <th>STATUS</th>
-                <th>ATTEMPTS</th>
-                <th>ACTION</th>
-              </tr>
-            </thead>
-            <tbody>
-              {deliveries.data.map((delivery) => (
-                <tr key={delivery.id}>
-                  <td>{formatDateTime(delivery.createdAt)}</td>
-                  <td>
-                    <span className="delivery-channel">
-                      {delivery.channel === "email" ? (
-                        <Mail size={15} />
-                      ) : (
-                        <MessageSquareText size={15} />
-                      )}
-                      {delivery.channel === "email" ? "Email" : "SMS"}
-                    </span>
-                  </td>
-                  <td>{delivery.orderNumber ?? "Staff invitation"}</td>
-                  <td>
-                    <span
-                      className="delivery-message-preview"
-                      title={delivery.message}
-                      aria-label={delivery.message}
-                    >
-                      {truncateMessage(delivery.message)}
-                    </span>
-                  </td>
-                  <td>
-                    <span className={`delivery-state is-${delivery.state}`}>
-                      {delivery.state}
-                    </span>
-                  </td>
-                  <td>{delivery.attempts}</td>
-                  <td>
-                    {delivery.state === "failed" && (
-                      <button
-                        className="button button-secondary delivery-retry-button"
-                        disabled={retryDelivery.isPending}
-                        onClick={() =>
-                          retryDelivery.mutate(delivery.id, {
-                            onSuccess: () =>
-                              toast.success("Delivery queued to retry."),
-                            onError: (error) =>
-                              toast.error(getApiErrorMessage(error)),
-                          })
-                        }
-                      >
-                        {retryDelivery.isPending ? (
-                          <LoaderCircle size={14} className="animate-spin" />
-                        ) : (
-                          <RotateCcw size={14} />
-                        )}
-                        Retry
-                      </button>
-                    )}
-                    {delivery.state === "sent" && delivery.sentAt && (
-                      <span className="delivery-sent-date">
-                        Sent {formatDateTime(delivery.sentAt)}
-                      </span>
-                    )}
-                  </td>
+        <>
+          <div className="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>CREATED</th>
+                  <th>CHANNEL</th>
+                  <th>RELATED ORDER OR INVITATION</th>
+                  <th>MESSAGE</th>
+                  <th>STATUS</th>
+                  <th>ATTEMPTS</th>
+                  <th>ACTION</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {pagination.items.map((delivery) => (
+                  <tr key={delivery.id}>
+                    <td>{formatDateTime(delivery.createdAt)}</td>
+                    <td>
+                      <span className="delivery-channel">
+                        {delivery.channel === "email" ? (
+                          <Mail size={15} />
+                        ) : (
+                          <MessageSquareText size={15} />
+                        )}
+                        {delivery.channel === "email" ? "Email" : "SMS"}
+                      </span>
+                    </td>
+                    <td>{delivery.orderNumber ?? "Staff invitation"}</td>
+                    <td>
+                      <span
+                        className="delivery-message-preview"
+                        title={delivery.message}
+                        aria-label={delivery.message}
+                      >
+                        {truncateMessage(delivery.message)}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={`delivery-state is-${delivery.state}`}>
+                        {delivery.state}
+                      </span>
+                    </td>
+                    <td>{delivery.attempts}</td>
+                    <td>
+                      {delivery.state === "failed" && (
+                        <button
+                          className="button button-secondary delivery-retry-button"
+                          disabled={retryDelivery.isPending}
+                          onClick={() =>
+                            retryDelivery.mutate(delivery.id, {
+                              onSuccess: () =>
+                                toast.success("Delivery queued to retry."),
+                              onError: (error) =>
+                                toast.error(getApiErrorMessage(error)),
+                            })
+                          }
+                        >
+                          {retryDelivery.isPending ? (
+                            <LoaderCircle size={14} className="animate-spin" />
+                          ) : (
+                            <RotateCcw size={14} />
+                          )}
+                          Retry
+                        </button>
+                      )}
+                      {delivery.state === "sent" && delivery.sentAt && (
+                        <span className="delivery-sent-date">
+                          Sent {formatDateTime(delivery.sentAt)}
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <Pagination {...pagination} label="message deliveries" />
+        </>
       ) : (
         <div className="empty-state">
           <Mail size={22} />

@@ -116,24 +116,26 @@ export default function CustomersPage() {
             <span>Add a customer or change the search.</span>
           </div>
         )}
-        <div className="table-footer">
-          <span>{customers.data?.meta.total ?? 0} customers</span>
-          <div>
-            <button
-              disabled={page === 1}
-              onClick={() => setPage((current) => current - 1)}
-            >
-              Previous
-            </button>
-            <span>{page}</span>
-            <button
-              disabled={page >= (customers.data?.meta.totalPages ?? 1)}
-              onClick={() => setPage((current) => current + 1)}
-            >
-              Next
-            </button>
+        {(customers.data?.meta.total ?? 0) > 10 && (
+          <div className="table-footer">
+            <span>{customers.data?.meta.total ?? 0} customers</span>
+            <div>
+              <button
+                disabled={page === 1}
+                onClick={() => setPage((current) => current - 1)}
+              >
+                Previous
+              </button>
+              <span>{page}</span>
+              <button
+                disabled={page >= (customers.data?.meta.totalPages ?? 1)}
+                onClick={() => setPage((current) => current + 1)}
+              >
+                Next
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </section>
       {showForm && (
         <div className="modal-backdrop">

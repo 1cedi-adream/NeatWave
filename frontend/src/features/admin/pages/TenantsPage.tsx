@@ -150,7 +150,9 @@ export default function TenantsPage() {
             <span>Onboard a laundry or change the filters.</span>
           </div>
         )}
-        {!tenants.isPending && !tenants.isError && tenants.data?.data.length ? (
+        {!tenants.isPending &&
+        !tenants.isError &&
+        (tenants.data?.meta.total ?? 0) > 10 ? (
           <div className="table-footer">
             <span>{tenants.data?.meta.total ?? 0} laundries</span>
             <div>

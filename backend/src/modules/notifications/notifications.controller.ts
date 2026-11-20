@@ -18,8 +18,7 @@ export async function list(req: Request, res: Response) {
       .select()
       .from(inAppNotifications)
       .where(eq(inAppNotifications.tenantId, req.auth!.tenantId!))
-      .orderBy(desc(inAppNotifications.createdAt))
-      .limit(100),
+      .orderBy(desc(inAppNotifications.createdAt)),
   });
 }
 
@@ -90,8 +89,7 @@ export async function deliveries(req: Request, res: Response) {
       ),
     )
     .where(eq(notificationJobs.tenantId, req.auth!.tenantId!))
-    .orderBy(desc(notificationJobs.createdAt))
-    .limit(100);
+    .orderBy(desc(notificationJobs.createdAt));
 
   const data = deliveryRows.map(({ payload, template, ...delivery }) => ({
     ...delivery,

@@ -87,14 +87,9 @@ export class EmailProvider implements MessageProvider {
 }
 
 export function validateNotificationConfiguration() {
-  const missing: string[] = [];
-  if (!env.MNOTIFY_API_KEY) missing.push("MNOTIFY_API_KEY");
-  if (!env.SMTP_HOST) missing.push("SMTP_HOST");
-  if (!env.SMTP_USER) missing.push("SMTP_USER");
-  if (!env.SMTP_PASSWORD) missing.push("SMTP_PASSWORD");
-  if (missing.length) {
+  if (!env.MNOTIFY_API_KEY && !env.SMTP_HOST) {
     throw new Error(
-      `Notification worker missing configuration: ${missing.join(", ")}`,
+      "Notification worker needs MNOTIFY_API_KEY or SMTP_HOST",
     );
   }
 }

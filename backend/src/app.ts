@@ -32,12 +32,15 @@ app.use(express.json({ limit: "1mb" }));
 app.use(
   pinoHttp({
     logger,
-    redact: [
-      "req.headers.authorization",
-      "req.body.password",
-      "req.body.refreshToken",
-      "res.headers['set-cookie']",
-    ],
+    serializers: {
+      req: (req) => ({
+        method: req.method,
+        body: req.raw.body,
+        params: req.raw.params,
+      }),
+      res: (res) => ({ success: res.statusCode < 400 }),
+    },
+    redact: ["req.body.password", "req.body.refreshToken"],
   }),
 );
 

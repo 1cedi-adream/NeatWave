@@ -3,6 +3,7 @@ import { Plus, Settings2, X } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { TableSkeleton } from "@/components/shared/LoadingSkeletons";
+import { Pagination, usePagination } from "@/components/shared/Pagination";
 import { CustomSelect } from "@/components/ui/CustomSelect";
 import { useCurrentUser } from "@/features/auth/hooks/useAuth";
 import { formatCurrency } from "@/lib/formatCurrency";
@@ -23,6 +24,7 @@ export default function ServicesPage() {
     null,
   );
   const services = useServices();
+  const pagination = usePagination(services.data ?? []);
   const currentUser = useCurrentUser();
   const createService = useCreateService();
   const updateService = useUpdateService();
@@ -105,66 +107,69 @@ export default function ServicesPage() {
             <button onClick={() => void services.refetch()}>Retry</button>
           </div>
         ) : services.data?.length ? (
-          <div className="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>SERVICE</th>
-                  <th>MODEL</th>
-                  <th>PRICE</th>
-                  <th>TURNAROUND</th>
-                  <th>STATUS</th>
-                  {canManage && <th>ACTION</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {services.data.map((service) => (
-                  <tr key={service.id}>
-                    <td>
-                      <b>{service.name}</b>
-                    </td>
-                    <td>{service.pricingModel.replace(/_/g, " ")}</td>
-                    <td>
-                      {service.pricingModel === "basket"
-                        ? `${service.basketOptions.length} options`
-                        : formatCurrency(
-                            (service.price?.unitPricePesewas ??
-                              service.price?.basePricePesewas ??
-                              0) / 100,
-                          )}
-                    </td>
-                    <td>{service.estimatedHours} hours</td>
-                    <td>{service.active ? "Active" : "Inactive"}</td>
-                    {canManage && (
-                      <td>
-                        <button onClick={() => setEditingService(service)}>
-                          Edit
-                        </button>{" "}
-                        <button
-                          disabled={updateService.isPending}
-                          onClick={() =>
-                            updateService.mutate(
-                              { id: service.id, active: !service.active },
-                              {
-                                onSuccess: () =>
-                                  toast.success(
-                                    service.active
-                                      ? "Service deactivated."
-                                      : "Service activated.",
-                                  ),
-                              },
-                            )
-                          }
-                        >
-                          {service.active ? "Deactivate" : "Activate"}
-                        </button>
-                      </td>
-                    )}
+          <>
+            <div className="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>SERVICE</th>
+                    <th>MODEL</th>
+                    <th>PRICE</th>
+                    <th>TURNAROUND</th>
+                    <th>STATUS</th>
+                    {canManage && <th>ACTION</th>}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {pagination.items.map((service) => (
+                    <tr key={service.id}>
+                      <td>
+                        <b>{service.name}</b>
+                      </td>
+                      <td>{service.pricingModel.replace(/_/g, " ")}</td>
+                      <td>
+                        {service.pricingModel === "basket"
+                          ? `${service.basketOptions.length} options`
+                          : formatCurrency(
+                              (service.price?.unitPricePesewas ??
+                                service.price?.basePricePesewas ??
+                                0) / 100,
+                            )}
+                      </td>
+                      <td>{service.estimatedHours} hours</td>
+                      <td>{service.active ? "Active" : "Inactive"}</td>
+                      {canManage && (
+                        <td>
+                          <button onClick={() => setEditingService(service)}>
+                            Edit
+                          </button>{" "}
+                          <button
+                            disabled={updateService.isPending}
+                            onClick={() =>
+                              updateService.mutate(
+                                { id: service.id, active: !service.active },
+                                {
+                                  onSuccess: () =>
+                                    toast.success(
+                                      service.active
+                                        ? "Service deactivated."
+                                        : "Service activated.",
+                                    ),
+                                },
+                              )
+                            }
+                          >
+                            {service.active ? "Deactivate" : "Activate"}
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <Pagination {...pagination} label="services" />
+          </>
         ) : (
           <div className="empty-state">
             <Settings2 size={22} />

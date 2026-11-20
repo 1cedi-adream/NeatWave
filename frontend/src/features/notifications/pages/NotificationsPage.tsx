@@ -1,8 +1,9 @@
-import { Bell, Mail } from "lucide-react";
+import { Bell, LoaderCircle, Mail } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { PanelSkeleton } from "@/components/shared/LoadingSkeletons";
+import { Pagination, usePagination } from "@/components/shared/Pagination";
 import { getApiErrorMessage } from "@/lib/apiError";
 import { formatDateTime } from "@/lib/formatDate";
 import {
@@ -17,6 +18,7 @@ export default function NotificationsPage() {
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
   const currentUser = useCurrentUser();
+  const pagination = usePagination(notifications.data ?? []);
   const unreadCount =
     notifications.data?.filter((notification) => !notification.readAt).length ??
     0;
@@ -48,7 +50,14 @@ export default function NotificationsPage() {
                 })
               }
             >
-              Mark all read
+              {markAllRead.isPending && (
+                <LoaderCircle
+                  size={16}
+                  className="animate-spin"
+                  aria-hidden="true"
+                />
+              )}
+              {markAllRead.isPending ? "Marking all read…" : "Mark all read"}
             </button>
           </div>
         }
@@ -62,28 +71,31 @@ export default function NotificationsPage() {
             <button onClick={() => void notifications.refetch()}>Retry</button>
           </div>
         ) : notifications.data?.length ? (
-          <ul className="notification-list">
-            {notifications.data.map((notification) => (
-              <li
-                key={notification.id}
-                className={notification.readAt ? "" : "is-unread"}
-              >
-                <div>
-                  <b>{notification.title}</b>
-                  <p>{notification.message}</p>
-                  <small>{formatDateTime(notification.createdAt)}</small>
-                </div>
-                {!notification.readAt && (
-                  <button
-                    disabled={markRead.isPending}
-                    onClick={() => markRead.mutate(notification.id)}
-                  >
-                    Mark read
-                  </button>
-                )}
-              </li>
-            ))}
-          </ul>
+          <>
+            <ul className="notification-list">
+              {pagination.items.map((notification) => (
+                <li
+                  key={notification.id}
+                  className={notification.readAt ? "" : "is-unread"}
+                >
+                  <div>
+                    <b>{notification.title}</b>
+                    <p>{notification.message}</p>
+                    <small>{formatDateTime(notification.createdAt)}</small>
+                  </div>
+                  {!notification.readAt && (
+                    <button
+                      disabled={markRead.isPending}
+                      onClick={() => markRead.mutate(notification.id)}
+                    >
+                      Mark read
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+            <Pagination {...pagination} label="notifications" />
+          </>
         ) : (
           <div className="empty-state">
             <Bell size={22} />

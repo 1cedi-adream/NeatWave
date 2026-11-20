@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import {
   Check,
   Clock3,
+  Inbox,
   Plus,
   Search,
   Users,
@@ -13,6 +14,7 @@ import {
   TableSkeleton,
 } from "@/components/shared/LoadingSkeletons";
 import { StatCard } from "@/components/shared/StatCard";
+import { Pagination, usePagination } from "@/components/shared/Pagination";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { formatDateTime } from "@/lib/formatDate";
 import { useCurrentUser } from "@/features/auth/hooks/useAuth";
@@ -31,6 +33,7 @@ export default function DashboardPage() {
       order.orderNumber.toLowerCase().includes(searchValue),
     );
   }, [data?.readyOrders, orderSearch]);
+  const pagination = usePagination(filteredReadyOrders);
 
   if (isPending)
     return (
@@ -74,6 +77,8 @@ export default function DashboardPage() {
 
   const washing =
     data?.ordersByStatus.find((item) => item.status === "Washing")?.value ?? 0;
+  const received =
+    data?.ordersByStatus.find((item) => item.status === "Received")?.value ?? 0;
 
   return (
     <div className="page-content">
@@ -103,13 +108,24 @@ export default function DashboardPage() {
           icon={<Check size={18} />}
           tone="peach"
         />
-        <StatCard
-          label="Order value"
-          value={formatCurrency((data?.totalOrderValuePesewas ?? 0) / 100)}
-          caption={`${data?.customerCount ?? 0} customers`}
-          icon={<Users size={18} />}
-          tone="sky"
-        />
+        {user?.tenantRole === "manager" && (
+          <StatCard
+            label="Order value"
+            value={formatCurrency((data?.totalOrderValuePesewas ?? 0) / 100)}
+            caption={`${data?.customerCount ?? 0} customers`}
+            icon={<Users size={18} />}
+            tone="sky"
+          />
+        )}
+        {user?.tenantRole === "staff" && (
+          <StatCard
+            label="Received"
+            value={String(received)}
+            caption="awaiting washing"
+            icon={<Inbox size={18} />}
+            tone="sky"
+          />
+        )}
       </div>
       <div className="overview-order-toolbar">
         <label className="search-field">
@@ -138,26 +154,29 @@ export default function DashboardPage() {
           </div>
         </div>
         {filteredReadyOrders.length ? (
-          <div className="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>ORDER</th>
-                  <th>DUE</th>
-                  <th>TOTAL</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredReadyOrders.map((order) => (
-                  <tr key={order.id}>
-                    <td>{order.orderNumber}</td>
-                    <td>{formatDateTime(order.dueAt)}</td>
-                    <td>{formatCurrency(order.totalPesewas / 100)}</td>
+          <>
+            <div className="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ORDER</th>
+                    <th>DUE</th>
+                    <th>TOTAL</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {pagination.items.map((order) => (
+                    <tr key={order.id}>
+                      <td>{order.orderNumber}</td>
+                      <td>{formatDateTime(order.dueAt)}</td>
+                      <td>{formatCurrency(order.totalPesewas / 100)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <Pagination {...pagination} label="ready orders" />
+          </>
         ) : (
           <div className="empty-state">
             <Check size={22} />

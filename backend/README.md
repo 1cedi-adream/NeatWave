@@ -37,7 +37,13 @@ Production responses never return invitation or reset tokens. Invitations are qu
 
 Order status SMS and email are queued only when the status is enabled in the laundry settings, the matching channel is enabled, and the customer has consented and provided a valid contact. The API commits these jobs with the status change; delivery happens asynchronously, so run the API and `npm run dev:worker` as separate processes.
 
-The worker requires `MNOTIFY_API_KEY`, `MNOTIFY_SENDER_ID`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`, and `SMTP_FROM`. It verifies SMTP connectivity at startup and exits with a clear error when required credentials are absent or the SMTP connection cannot be verified. The mNotify sender ID must be approved and no longer than 11 characters.
+For SMS, set `MNOTIFY_API_KEY` and an approved `MNOTIFY_SENDER_ID` of at most 11 characters. For email, set `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`, and `SMTP_FROM`. The worker starts when at least one provider is configured; a failure in one provider is recorded on that job without stopping delivery through the other provider.
+
+### Render deployment
+
+Deploy the API and notification worker as **separate services** from the same repository. The API web service starts with `npm start`. Create a Render **Background Worker** with root directory `backend`, build command `npm ci && npm run build`, and start command `npm run start:worker`. Give the worker the same `DATABASE_URL`, `JWT_ACCESS_SECRET`, and `JWT_REFRESH_SECRET` as the API, plus `MNOTIFY_API_KEY` and `MNOTIFY_SENDER_ID` for SMS. Add the SMTP variables if sending email. Set `NODE_ENV=production`. A web service running `npm start` does not launch the worker.
+
+After deployment, look for `Notification worker started` in the worker service logs. If no SMS job appears in Message Deliveries, check the laundry's SMS setting and the customer's SMS consent and phone number. If a job stays pending, check that the worker is running and shares the API database. If it fails, inspect its attempts and worker logs for the mNotify error. A job marked sent means mNotify accepted it; carrier delivery is separate.
 
 To verify delivery locally:
 

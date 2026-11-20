@@ -158,7 +158,7 @@ export default function OrdersPage() {
                   <th>ORDER</th>
                   <th>CUSTOMER</th>
                   <th>DUE</th>
-                  <th>STATUS</th>
+                  <th>STATUS / NEXT STEP</th>
                   <th>TOTAL</th>
                 </tr>
               </thead>
@@ -181,40 +181,43 @@ export default function OrdersPage() {
                           Ready for Pickup
                         </span>
                       ) : (
-                        <CustomSelect
-                          variant="status"
-                          value={order.status}
-                          disabled={updatingOrderId === order.id}
-                          onChange={(event) => {
-                            setUpdatingOrderId(order.id);
-                            updateStatus.mutate(
-                              {
-                                id: order.id,
-                                status: event.target.value as OrderStatus,
-                              },
-                              {
-                                onSuccess: () =>
-                                  toast.success("Order status updated."),
-                                onError: (error) =>
-                                  toast.error(getApiErrorMessage(error)),
-                                onSettled: () => setUpdatingOrderId(null),
-                              },
-                            );
-                          }}
-                        >
-                          {order.status === "Received" && (
-                            <>
-                              <option>Received</option>
-                              <option>Washing</option>
-                            </>
-                          )}
-                          {order.status === "Washing" && (
-                            <>
-                              <option>Washing</option>
-                              <option>Ready for Pickup</option>
-                            </>
-                          )}
-                        </CustomSelect>
+                        <div className="order-status-action">
+                          <CustomSelect
+                            aria-label={`Update status for order ${order.orderNumber}`}
+                            variant="status"
+                            value={order.status}
+                            disabled={updatingOrderId === order.id}
+                            onChange={(event) => {
+                              setUpdatingOrderId(order.id);
+                              updateStatus.mutate(
+                                {
+                                  id: order.id,
+                                  status: event.target.value as OrderStatus,
+                                },
+                                {
+                                  onSuccess: () =>
+                                    toast.success("Order status updated."),
+                                  onError: (error) =>
+                                    toast.error(getApiErrorMessage(error)),
+                                  onSettled: () => setUpdatingOrderId(null),
+                                },
+                              );
+                            }}
+                          >
+                            {order.status === "Received" && (
+                              <>
+                                <option>Received</option>
+                                <option>Washing</option>
+                              </>
+                            )}
+                            {order.status === "Washing" && (
+                              <>
+                                <option>Washing</option>
+                                <option>Ready for Pickup</option>
+                              </>
+                            )}
+                          </CustomSelect>
+                        </div>
                       )}
                       {updatingOrderId === order.id && (
                         <LoaderCircle
@@ -237,24 +240,26 @@ export default function OrdersPage() {
             <span>Create the first order or change your filters.</span>
           </div>
         )}
-        <div className="table-footer">
-          <span>{orders.data?.meta.total ?? 0} orders</span>
-          <div>
-            <button
-              disabled={page === 1}
-              onClick={() => setPage((value) => value - 1)}
-            >
-              Previous
-            </button>
-            <span>{page}</span>
-            <button
-              disabled={page >= (orders.data?.meta.totalPages ?? 1)}
-              onClick={() => setPage((value) => value + 1)}
-            >
-              Next
-            </button>
+        {(orders.data?.meta.total ?? 0) > 10 && (
+          <div className="table-footer">
+            <span>{orders.data?.meta.total ?? 0} orders</span>
+            <div>
+              <button
+                disabled={page === 1}
+                onClick={() => setPage((value) => value - 1)}
+              >
+                Previous
+              </button>
+              <span>{page}</span>
+              <button
+                disabled={page >= (orders.data?.meta.totalPages ?? 1)}
+                onClick={() => setPage((value) => value + 1)}
+              >
+                Next
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </section>
       {creating && (
         <CreateOrderDialog

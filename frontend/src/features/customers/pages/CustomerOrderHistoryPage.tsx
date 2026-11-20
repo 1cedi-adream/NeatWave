@@ -7,6 +7,7 @@ import {
 } from "react-router-dom";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { TableSkeleton } from "@/components/shared/LoadingSkeletons";
+import { Pagination, usePagination } from "@/components/shared/Pagination";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { formatDate } from "@/lib/formatDate";
 import { useCustomer } from "../hooks/useCustomers";
@@ -19,6 +20,7 @@ export default function CustomerOrderHistoryPage() {
     (location.state as { openedFromCustomerDialog?: boolean } | null)
       ?.openedFromCustomerDialog === true;
   const customer = useCustomer(customerId, openedFromCustomerDialog);
+  const pagination = usePagination(customer.data?.orders ?? []);
 
   if (!openedFromCustomerDialog) return <Navigate to="/customers" replace />;
 
@@ -50,28 +52,31 @@ export default function CustomerOrderHistoryPage() {
             <button onClick={() => void customer.refetch()}>Retry</button>
           </div>
         ) : customer.data.orders.length ? (
-          <div className="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>ORDER</th>
-                  <th>STATUS</th>
-                  <th>DATE</th>
-                  <th>TOTAL</th>
-                </tr>
-              </thead>
-              <tbody>
-                {customer.data.orders.map((order) => (
-                  <tr key={order.id}>
-                    <td>{order.orderNumber}</td>
-                    <td>{order.status}</td>
-                    <td>{formatDate(order.createdAt)}</td>
-                    <td>{formatCurrency(order.totalPesewas / 100)}</td>
+          <>
+            <div className="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ORDER</th>
+                    <th>STATUS</th>
+                    <th>DATE</th>
+                    <th>TOTAL</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {pagination.items.map((order) => (
+                    <tr key={order.id}>
+                      <td>{order.orderNumber}</td>
+                      <td>{order.status}</td>
+                      <td>{formatDate(order.createdAt)}</td>
+                      <td>{formatCurrency(order.totalPesewas / 100)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <Pagination {...pagination} label="orders" />
+          </>
         ) : (
           <div className="empty-state">
             <b>No orders yet</b>

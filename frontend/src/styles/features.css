@@ -767,6 +767,18 @@
   @apply ml-1 inline-block align-middle text-brand;
 }
 
+.order-status-action {
+  @apply inline-grid gap-1;
+}
+
+.order-status-action select {
+  @apply min-h-9 cursor-pointer border border-brand bg-brand-soft pl-3 pr-8 text-sm font-bold text-brand hover:bg-[#d6e8dc] focus-visible:ring-4 focus-visible:ring-brand/20;
+}
+
+.order-status-action select:disabled {
+  @apply cursor-wait opacity-60;
+}
+
 .admin-tenants-page {
   @apply max-w-[1240px];
 }
@@ -925,6 +937,10 @@
 .order-wizard,
 .order-detail-modal {
   @apply max-h-[92vh] max-w-3xl overflow-y-auto;
+}
+
+.order-wizard {
+  @apply max-h-none overflow-visible;
 }
 
 .wizard-section,
@@ -1109,7 +1125,7 @@
 }
 
 .customer-combobox-options {
-  @apply absolute inset-x-0 top-full z-40 mt-1 max-h-60 overflow-y-auto rounded-[10px] border border-line bg-white p-1.5 shadow-lg;
+  @apply absolute inset-x-0 top-full z-40 mt-1 max-h-72 overflow-y-auto overscroll-contain rounded-[10px] border border-line bg-white p-1.5 shadow-lg;
 }
 
 .customer-combobox-options > button {
@@ -2062,12 +2078,6 @@ form label:has(textarea:not([required])) > textarea {
   .field-hint {
     @apply text-xs font-normal text-gray-600;
   }
-  .settings-readonly {
-    @apply flex items-center justify-between rounded-md border border-gray-200 p-3 text-sm text-gray-600;
-  }
-  .settings-readonly b {
-    @apply text-sm text-gray-800;
-  }
   .toggle-setting {
     @apply flex items-center justify-between py-2;
   }
@@ -2088,20 +2098,8 @@ form label:has(textarea:not([required])) > textarea {
   }
 }
 
-.realtime-connection {
-  @apply inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-medium;
-}
-
-.realtime-connection.is-connected {
-  @apply border-brand/20 bg-brand-soft text-brand;
-}
-
-.realtime-connection.is-disconnected {
-  @apply border-gray-200 bg-gray-50 text-gray-500;
-}
-
 .overview-order-toolbar {
-  @apply mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between;
+  @apply mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-start;
 }
 
 .overview-order-toolbar .search-field {

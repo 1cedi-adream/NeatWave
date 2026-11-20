@@ -72,7 +72,6 @@ async function claim() {
 async function run() {
   if (env.NODE_ENV !== "test") {
     validateNotificationConfiguration();
-    if (email instanceof EmailProvider) await email.verify();
   }
   logger.info(
     { pollIntervalMs: env.WORKER_POLL_MS },

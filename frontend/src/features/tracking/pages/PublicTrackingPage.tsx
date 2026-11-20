@@ -2,7 +2,6 @@ import { Check, Clock3, WashingMachine } from "lucide-react";
 import { useParams } from "react-router-dom";
 import { useTracking } from "../hooks/useTracking";
 import { formatDateTime } from "@/lib/formatDate";
-import { RealtimeConnectionBadge } from "@/features/realtime/components/RealtimeConnectionBadge";
 
 const stages = ["Received", "Washing", "Ready for Pickup"] as const;
 
@@ -36,7 +35,6 @@ export default function PublicTrackingPage() {
     <main className="tracking-page">
       <section className="tracking-card">
         <WashingMachine size={28} />
-        <RealtimeConnectionBadge />
         <p>Order progress</p>
         <h1>{tracking.data.orderNumber}</h1>
         <ol className="tracking-steps">

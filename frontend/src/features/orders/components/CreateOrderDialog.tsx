@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { CustomSelect } from "@/components/ui/CustomSelect";
@@ -30,6 +30,7 @@ export function CreateOrderDialog({
   onCreated: (orderId: string) => void;
 }) {
   const [step, setStep] = useState(1);
+  const formRef = useRef<HTMLFormElement>(null);
   const [customerId, setCustomerId] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
     null,
@@ -166,7 +167,7 @@ export function CreateOrderDialog({
             <X size={18} />
           </button>
         </div>
-        <form onSubmit={submit}>
+        <form ref={formRef} onSubmit={submit}>
           {step === 1 && (
             <div className="wizard-section">
               <label>
@@ -504,23 +505,27 @@ export function CreateOrderDialog({
             >
               {step === 1 ? "Cancel" : "Back"}
             </button>
-            {step < 3 ? (
-              <button
-                type="button"
-                className="button button-primary"
-                disabled={step === 1 ? !customerReady : !linesReady}
-                onClick={() => setStep((value) => value + 1)}
-              >
-                Continue
-              </button>
-            ) : (
-              <button
-                className="button button-primary"
-                disabled={createOrder.isPending || createCustomer.isPending}
-              >
-                {createOrder.isPending ? "Creating…" : "Create order"}
-              </button>
-            )}
+            <button
+              type="button"
+              className="button button-primary"
+              disabled={
+                step === 1
+                  ? !customerReady
+                  : step === 2
+                    ? !linesReady
+                    : createOrder.isPending || createCustomer.isPending
+              }
+              onClick={() => {
+                if (step < 3) setStep((value) => value + 1);
+                else formRef.current?.requestSubmit();
+              }}
+            >
+              {step === 3
+                ? createOrder.isPending
+                  ? "Creating…"
+                  : "Create order"
+                : "Continue"}
+            </button>
           </div>
         </form>
       </section>

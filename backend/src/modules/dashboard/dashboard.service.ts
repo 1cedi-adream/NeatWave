@@ -36,8 +36,7 @@ export async function getSummary(tenantId: string) {
           eq(orders.status, "Ready for Pickup"),
         ),
       )
-      .orderBy(orders.dueAt)
-      .limit(5),
+      .orderBy(orders.dueAt),
   ]);
 
   return {

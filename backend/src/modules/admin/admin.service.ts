@@ -35,7 +35,7 @@ export async function getSummary() {
       db.select({ value: count() }).from(customers),
       db.select({ value: count() }).from(orders),
       db.select({ value: sum(orders.totalPesewas) }).from(orders),
-      db.select().from(tenants).orderBy(desc(tenants.createdAt)).limit(5),
+      db.select().from(tenants).orderBy(desc(tenants.createdAt)),
     ]);
   const activeTenants = tenantRows.find((row) => row.active)?.value ?? 0;
   const inactiveTenants = tenantRows.find((row) => !row.active)?.value ?? 0;
