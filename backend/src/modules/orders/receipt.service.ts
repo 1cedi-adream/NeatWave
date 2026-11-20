@@ -12,6 +12,10 @@ import {
 import { notFound } from "@/utils/errors.js";
 import { hashToken } from "@/utils/token.utils.js";
 
+const PAGE_W = 400;
+const OUTER = 20;
+const PAD = 24;
+
 type ReceiptData = {
   order: typeof orders.$inferSelect;
   customer: typeof customers.$inferSelect;
@@ -23,7 +27,7 @@ type ReceiptData = {
 
 export async function generateTenantOrderReceipt(
   orderId: string,
-  tenantId: string,
+  tenantId: string
 ) {
   const receiptData = await getReceiptData(eq(orders.id, orderId), tenantId);
   return createReceiptPdf(receiptData);
@@ -40,14 +44,14 @@ export async function generatePublicOrderReceipt(trackingToken: string) {
 
   const receiptData = await getReceiptData(
     eq(orders.id, order.id),
-    order.tenantId,
+    order.tenantId
   );
   return createReceiptPdf(receiptData);
 }
 
 async function getReceiptData(
   orderCondition: ReturnType<typeof eq>,
-  tenantId: string,
+  tenantId: string
 ) {
   const [row] = await db
     .select({ order: orders, customer: customers })
@@ -69,20 +73,14 @@ async function getReceiptData(
       .select()
       .from(receipts)
       .where(
-        and(
-          eq(receipts.orderId, row.order.id),
-          eq(receipts.tenantId, tenantId),
-        ),
+        and(eq(receipts.orderId, row.order.id), eq(receipts.tenantId, tenantId))
       )
       .limit(1),
     db
       .select()
       .from(payments)
       .where(
-        and(
-          eq(payments.orderId, row.order.id),
-          eq(payments.tenantId, tenantId),
-        ),
+        and(eq(payments.orderId, row.order.id), eq(payments.tenantId, tenantId))
       ),
   ]);
 
@@ -101,183 +99,308 @@ async function getReceiptData(
         (payment.kind === "refund"
           ? -payment.amountPesewas
           : payment.amountPesewas),
-      0,
+      0
     ),
   } satisfies ReceiptData;
 }
 
 function createReceiptPdf(receiptData: ReceiptData): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    const document = new PDFDocument({ size: "A4", margin: 48 });
-    const chunks: Buffer[] = [];
+  const { order, customer, lines, settings, receipt } = receiptData;
+  const snapshot = (receipt?.snapshot ?? {}) as Record<string, unknown>;
 
-    document.on("data", (chunk: Buffer) => chunks.push(chunk));
-    document.on("end", () => resolve(Buffer.concat(chunks)));
-    document.on("error", reject);
+  const businessName =
+    typeof snapshot.businessName === "string"
+      ? snapshot.businessName
+      : settings.businessName;
+  const address =
+    typeof snapshot.address === "string" ? snapshot.address : settings.address;
+  const phone =
+    typeof snapshot.phone === "string" ? snapshot.phone : settings.phone;
+  const email =
+    typeof snapshot.email === "string" ? snapshot.email : settings.email;
+  const footer =
+    typeof snapshot.footer === "string"
+      ? snapshot.footer
+      : settings.receiptFooter;
+  const showContact =
+    typeof snapshot.showContact === "boolean"
+      ? snapshot.showContact
+      : settings.showContactOnReceipt;
+  const currency =
+    typeof snapshot.currency === "string"
+      ? snapshot.currency
+      : settings.currency;
 
-    const { order, customer, lines, settings, receipt } = receiptData;
-    const snapshot = (receipt?.snapshot ?? {}) as Record<string, unknown>;
-    const receiptBusinessName =
-      typeof snapshot.businessName === "string"
-        ? snapshot.businessName
-        : settings.businessName;
-    const receiptAddress =
-      typeof snapshot.address === "string"
-        ? snapshot.address
-        : settings.address;
-    const receiptPhone =
-      typeof snapshot.phone === "string" ? snapshot.phone : settings.phone;
-    const receiptEmail =
-      typeof snapshot.email === "string" ? snapshot.email : settings.email;
-    const receiptFooter =
-      typeof snapshot.footer === "string"
-        ? snapshot.footer
-        : settings.receiptFooter;
-    const showContact =
-      typeof snapshot.showContact === "boolean"
-        ? snapshot.showContact
-        : settings.showContactOnReceipt;
-    const currency =
-      typeof snapshot.currency === "string"
-        ? snapshot.currency
-        : settings.currency;
-    const green = "#2e694f";
-    const pesewas = (amount: number) =>
-      `${currency} ${(amount / 100).toFixed(2)}`;
+  const GREEN = "#2e694f";
+  const GREEN_SOFT = "#e3efe8";
+  const INK = "#1f2a24";
+  const MUTED = "#7a867f";
+  const BG = "#eef1ee";
+  const LINE = "#c9d1cc";
+  const money = (amount: number) => `${currency} ${(amount / 100).toFixed(2)}`;
 
-    document
-      .fillColor(green)
-      .fontSize(22)
-      .font("Helvetica-Bold")
-      .text(receiptBusinessName, { continued: false });
-    document.moveDown(0.25).fillColor("#5d6a63").fontSize(10).font("Helvetica");
-    if (showContact) {
-      if (receiptAddress) document.text(receiptAddress);
-      if (receiptPhone || receiptEmail) {
-        document.text(
-          [receiptPhone, receiptEmail].filter(Boolean).join("  ·  "),
-        );
-      }
+  type Doc = InstanceType<typeof PDFDocument>;
+
+  const render = (doc: Doc, pageH: number): number => {
+    const cx = OUTER;
+    const cw = PAGE_W - OUTER * 2;
+    const ix = cx + PAD;
+    const iw = cw - PAD * 2;
+    const mid = PAGE_W / 2;
+    let y = OUTER + 28;
+
+    if (pageH > 0) {
+      doc.rect(0, 0, PAGE_W, pageH).fill(BG);
+      doc.roundedRect(cx, OUTER, cw, pageH - OUTER * 2, 18).fill("#ffffff");
     }
 
-    document
-      .moveDown(1.5)
-      .fillColor("#1f2a24")
-      .fontSize(17)
+    const tearLine = (ty: number) => {
+      doc
+        .save()
+        .dash(3, { space: 3 })
+        .lineWidth(1)
+        .strokeColor(LINE)
+        .moveTo(cx + 16, ty)
+        .lineTo(cx + cw - 16, ty)
+        .stroke()
+        .restore();
+      if (pageH > 0) {
+        doc.circle(cx, ty, 10).fill(BG);
+        doc.circle(cx + cw, ty, 10).fill(BG);
+      }
+    };
+
+    doc
       .font("Helvetica-Bold")
-      .text("Order receipt");
-    document.moveDown(0.7).fontSize(10).font("Helvetica");
-    document.text(`Order: ${order.orderNumber}`);
-    document.text(`Receipt: ${receipt?.receiptNumber ?? "—"}`);
-    document.text(`Date: ${formatReceiptDate(order.createdAt)}`);
-    document.text(`Due: ${formatReceiptDate(order.dueAt)}`);
-    document.text(`Status: ${order.status}`);
+      .fontSize(10)
+      .fillColor(GREEN)
+      .text(businessName.toUpperCase(), ix, y, {
+        width: iw,
+        align: "center",
+        characterSpacing: 1,
+      });
+    y = doc.y + 2;
+    if (showContact) {
+      doc.font("Helvetica").fontSize(8.5).fillColor(MUTED);
+      if (address) {
+        doc.text(address, ix, y, { width: iw, align: "center" });
+        y = doc.y;
+      }
+      const contact = [phone, email].filter(Boolean).join("  ·  ");
+      if (contact) {
+        doc.text(contact, ix, y, { width: iw, align: "center" });
+        y = doc.y;
+      }
+    }
+    y += 18;
 
-    document.moveDown(1).font("Helvetica-Bold").text("Customer");
-    document.font("Helvetica").text(customer.fullName);
-    document.text(customer.phone);
-    if (customer.email) document.text(customer.email);
+    const yc = y + 26;
+    doc.circle(mid, yc, 26).fill(GREEN_SOFT);
+    doc.circle(mid, yc, 18).fill(GREEN);
+    doc
+      .save()
+      .lineWidth(3.5)
+      .lineCap("round")
+      .lineJoin("round")
+      .moveTo(mid - 7, yc)
+      .lineTo(mid - 2, yc + 5)
+      .lineTo(mid + 8, yc - 5)
+      .stroke("#ffffff")
+      .restore();
+    y += 52 + 14;
 
-    document.moveDown(1.5);
-    const left = 48;
-    const serviceWidth = 235;
-    const detailWidth = 140;
-    const amountWidth = 125;
-    const tableWidth = serviceWidth + detailWidth + amountWidth;
-    let rowY = document.y;
-    document.rect(left, rowY, tableWidth, 25).fill(green);
-    document.fillColor("#ffffff").font("Helvetica-Bold").fontSize(9);
-    document.text("SERVICE", left + 8, rowY + 8, { width: serviceWidth - 12 });
-    document.text("DETAIL", left + serviceWidth, rowY + 8, {
-      width: detailWidth - 8,
-    });
-    document.text("AMOUNT", left + serviceWidth + detailWidth, rowY + 8, {
-      width: amountWidth - 8,
-      align: "right",
-    });
-    rowY += 25;
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(22)
+      .fillColor(INK)
+      .text("Thank you!", ix, y, { width: iw, align: "center" });
+    y = doc.y + 4;
+    doc
+      .font("Helvetica")
+      .fontSize(9.5)
+      .fillColor(MUTED)
+      .text("Your order receipt has been issued successfully", ix, y, {
+        width: iw,
+        align: "center",
+      });
+    y = doc.y + 22;
 
+    tearLine(y);
+    y += 24;
+
+    const colW = iw / 2;
+    const pair = (
+      leftLabel: string,
+      leftValue: string,
+      rightLabel?: string,
+      rightValue?: string,
+      rightColor = INK
+    ) => {
+      doc.font("Helvetica").fontSize(8).fillColor(MUTED);
+      doc.text(leftLabel, ix, y, { width: colW, characterSpacing: 0.8 });
+      doc.text(rightLabel as string, ix + colW, y, {
+        width: colW,
+        align: "right",
+        characterSpacing: 0.8,
+      });
+      doc.font("Helvetica-Bold").fontSize(12);
+      doc.fillColor(INK).text(leftValue, ix, y + 13, { width: colW });
+      doc.fillColor(rightColor).text(rightValue as string, ix + colW, y + 13, {
+        width: colW,
+        align: "right",
+      });
+      y += 42;
+    };
+
+    pair(
+      "ORDER NUMBER",
+      order.orderNumber,
+      "AMOUNT",
+      money(order.totalPesewas),
+      GREEN
+    );
+    pair("RECEIPT NO.", receipt?.receiptNumber ?? "—");
+    pair(
+      "DATE & TIME",
+      formatReceiptDate(order.createdAt),
+      "DUE",
+      formatReceiptDate(order.dueAt)
+    );
+
+    y += 2;
+    doc.roundedRect(ix, y, iw, 52, 12).fill("#f3f5f2");
+    doc.circle(ix + 30, y + 26, 16).fill(GREEN);
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(13)
+      .fillColor("#ffffff")
+      .text(
+        customer.fullName.trim().charAt(0).toUpperCase() || "?",
+        ix + 14,
+        y + 19,
+        { width: 32, align: "center" }
+      );
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(11)
+      .fillColor(INK)
+      .text(customer.fullName, ix + 58, y + 11, {
+        width: iw - 70,
+        height: 13,
+        ellipsis: true,
+      });
+    doc
+      .font("Helvetica")
+      .fontSize(9)
+      .fillColor(MUTED)
+      .text(
+        [customer.phone, customer.email].filter(Boolean).join("  ·  "),
+        ix + 58,
+        y + 28,
+        { width: iw - 70, height: 12, ellipsis: true }
+      );
+    y += 52 + 24;
+
+    doc
+      .font("Helvetica")
+      .fontSize(8)
+      .fillColor(MUTED)
+      .text("SERVICES", ix, y, { width: iw, characterSpacing: 0.8 });
+    y += 18;
+
+    const amountW = 90;
     for (const line of lines) {
       const detail =
         line.basketName ??
         (line.quantity ? `Quantity: ${line.quantity}` : "Flat fee");
-      const rowHeight = 30;
-      if (
-        rowY + rowHeight >
-        document.page.height - document.page.margins.bottom
-      ) {
-        document.addPage();
-        rowY = document.y;
-        document.rect(left, rowY, tableWidth, 25).fill(green);
-        document.fillColor("#ffffff").font("Helvetica-Bold").fontSize(9);
-        document.text("SERVICE", left + 8, rowY + 8, {
-          width: serviceWidth - 12,
-        });
-        document.text("DETAIL", left + serviceWidth, rowY + 8, {
-          width: detailWidth - 8,
-        });
-        document.text("AMOUNT", left + serviceWidth + detailWidth, rowY + 8, {
-          width: amountWidth - 8,
-          align: "right",
-        });
-        rowY += 25;
-      }
-      document.rect(left, rowY, tableWidth, rowHeight).fill("#f6f6f2");
-      document.fillColor("#1f2a24").font("Helvetica").fontSize(9);
-      document.text(line.serviceName, left + 8, rowY + 9, {
-        width: serviceWidth - 12,
-      });
-      document.text(detail, left + serviceWidth, rowY + 9, {
-        width: detailWidth - 8,
-      });
-      document.text(
-        pesewas(line.lineTotalPesewas),
-        left + serviceWidth + detailWidth,
-        rowY + 9,
-        {
-          width: amountWidth - 8,
-          align: "right",
-        },
-      );
-      rowY += rowHeight;
-    }
 
-    document.y = rowY + 18;
-    const totalLabelX = 350;
-    const totalAmountX = 435;
-    const totals = [
-      ["Subtotal", order.subtotalPesewas],
-      ["Discount", -order.discountPesewas],
-      ["Tax", order.taxPesewas],
-      ["Total", order.totalPesewas],
-      ["Paid", receiptData.netPaidPesewas],
-      ["Balance", order.totalPesewas - receiptData.netPaidPesewas],
-    ] as const;
-    for (const [label, value] of totals) {
-      const isTotal = label === "Total";
-      document
-        .font(isTotal ? "Helvetica-Bold" : "Helvetica")
-        .fontSize(isTotal ? 12 : 10);
-      document.text(label, totalLabelX, document.y, { width: 80 });
-      document.text(pesewas(value), totalAmountX, document.y, {
-        width: 125,
+      doc.font("Helvetica-Bold").fontSize(10).fillColor(INK);
+      doc.text(line.serviceName, ix, y, { width: iw - amountW - 8 });
+      const afterName = doc.y;
+      doc.text(money(line.lineTotalPesewas), ix + iw - amountW, y, {
+        width: amountW,
         align: "right",
       });
-      document.moveDown(0.65);
+      doc.font("Helvetica").fontSize(8.5).fillColor(MUTED);
+      doc.text(detail, ix, afterName + 1, { width: iw - amountW - 8 });
+      y = doc.y + 8;
+      doc
+        .save()
+        .lineWidth(0.5)
+        .strokeColor("#e6ebe7")
+        .moveTo(ix, y)
+        .lineTo(ix + iw, y)
+        .stroke()
+        .restore();
+      y += 9;
     }
 
-    if (receiptFooter) {
-      document.moveDown(2).fillColor("#5d6a63").fontSize(9).font("Helvetica");
-      document.text(receiptFooter, { align: "center" });
+    y += 6;
+    tearLine(y);
+    y += 22;
+
+    const totals: Array<[string, number, boolean]> = [
+      ["Subtotal", order.subtotalPesewas, false],
+      ...(order.discountPesewas
+        ? ([["Discount", -order.discountPesewas, false]] as Array<
+            [string, number, boolean]
+          >)
+        : []),
+      ...(order.taxPesewas
+        ? ([["Tax", order.taxPesewas, false]] as Array<
+            [string, number, boolean]
+          >)
+        : []),
+      ["Total", order.totalPesewas, true],
+      // ["Paid", receiptData.netPaidPesewas, false],
+      // ["Balance", order.totalPesewas - receiptData.netPaidPesewas, false],
+    ];
+    for (const [label, value, isTotal] of totals) {
+      doc
+        .font(isTotal ? "Helvetica-Bold" : "Helvetica")
+        .fontSize(isTotal ? 13 : 10)
+        .fillColor(isTotal ? GREEN : label === "Balance" ? INK : MUTED);
+      doc.text(label, ix, y, { width: colW });
+      doc
+        .fillColor(isTotal ? GREEN : INK)
+        .text(money(value), ix + colW, y, { width: colW, align: "right" });
+      y += isTotal ? 26 : 19;
     }
 
-    document.end();
+    if (footer) {
+      y += 8;
+      doc
+        .font("Helvetica")
+        .fontSize(8.5)
+        .fillColor(MUTED)
+        .text(footer, ix, y, { width: iw, align: "center" });
+      y = doc.y;
+    }
+
+    return y + PAD;
+  };
+
+  const probe = new PDFDocument({ size: [PAGE_W, 6000], margin: 0 });
+  const contentEnd = render(probe, 0);
+  probe.end();
+
+  const pageH = Math.ceil(contentEnd + OUTER);
+
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ size: [PAGE_W, pageH], margin: 0 });
+    const chunks: Buffer[] = [];
+    doc.on("data", (chunk: Buffer) => chunks.push(chunk));
+    doc.on("end", () => resolve(Buffer.concat(chunks)));
+    doc.on("error", reject);
+
+    render(doc, pageH);
+    doc.end();
   });
 }
 
 function formatReceiptDate(date: Date) {
   return new Intl.DateTimeFormat("en-GH", {
-    dateStyle: "long",
+    dateStyle: "medium",
     timeStyle: "short",
     timeZone: "Africa/Accra",
   }).format(date);
